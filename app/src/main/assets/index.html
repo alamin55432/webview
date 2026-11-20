@@ -6,6 +6,2236 @@
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
 </head>
 <body style="font-family: monospace">
-    REPLACE THIS FILE WITH YOUR OWN INDEX.HTML
+    <!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>বৈঠকখানা - বাংলা সোশ্যাল সাইট</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Noto+Sans+Bengali:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans Bengali', 'Hind Siliguri', system-ui, -apple-system, sans-serif;
+            line-height: 1.65;
+            background-color: #fafafa;
+            color: #171717;
+        }
+        .clean-card {
+            background: #ffffff;
+            border: 1px solid #e5e5e5;
+            border-radius: 16px;
+        }
+        .soft-green-box {
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 16px;
+        }
+        .story-clamp {
+            display: -webkit-box;
+            -webkit-line-clamp: 5;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        .tabular-nums {
+            font-variant-numeric: tabular-nums;
+        }
+        @keyframes popupShrink {
+            from { width: 100%; }
+            to { width: 0%; }
+        }
+    </style>
+</head>
+<body class="bg-neutral-50 text-neutral-900 antialiased min-h-screen pb-10">
+
+    <div id="app" class="min-h-screen flex flex-col"></div>
+
+    <script>
+        // ১. ফায়ারবেস কনফিগারেশন
+        const firebaseConfig = {
+            apiKey: "AIzaSyCwxTRS9qV4E_SKNcDbwZhpAbmt9lzTTB0",
+            authDomain: "uthan-app.firebaseapp.com",
+            databaseURL: "https://uthan-app-default-rtdb.firebaseio.com",
+            projectId: "uthan-app",
+            storageBucket: "uthan-app.firebasestorage.app",
+            messagingSenderId: "38539464818",
+            appId: "1:38539464818:web:8518def23c53c3ec5ff2eb",
+            measurementId: "G-WVRJNJBVTY"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+
+        const EDITOR_EMAIL = "alamin55432@gmail.com";
+        const NEWS_TTL = 60 * 60 * 1000;      // ১ ঘণ্টা পরপর সংবাদ আপডেট
+        const OTHER_TTL = 6 * 60 * 60 * 1000; // ৬ ঘণ্টা পরপর কুরআন ও হাদিস আপডেট
+        const CACHE_KEY = "boithokkhana_live_cards_v5";
+
+        const professions = [
+            "কৃষক", "ছাত্র", "শিক্ষক", "প্রকৌশলী",
+            "ডাক্তার", "ব্যবসায়ী", "প্রবাসী", "চাকরিজীবী"
+        ];
+
+        const PROVERBS = [
+            ["অতি লোভে তাঁতি নষ্ট।", "বেশি লোভ করলে যা আছে তাও হারাতে হয়।"],
+            ["এক হাতে তালি বাজে না।", "ঝগড়া বা কাজ, দুই পক্ষ ছাড়া হয় না।"],
+            ["নাচতে না জানলে উঠান বাঁকা।", "নিজের অক্ষমতার দোষ অন্যের ঘাড়ে চাপানো।"],
+            ["সবুরে মেওয়া ফলে।", "ধৈর্য ধরলে ভালো ফল পাওয়া যায়।"],
+            ["যত গর্জে তত বর্ষে না।", "যারা বেশি বড়াই করে তারা কাজে কম দেখায়।"],
+            ["অতি দর্পে হত লঙ্কা।", "অহংকারের পতন অনিবার্য।"],
+            ["যতক্ষণ শ্বাস ততক্ষণ আশ।", "শেষ মুহূর্ত পর্যন্ত আশা ছাড়তে নেই।"],
+            ["দশের লাঠি একের বোঝা।", "সবাই মিলে করলে কাজ সহজ হয়।"],
+            ["ইচ্ছা থাকলে উপায় হয়।", "মনের জোর থাকলে কাজের পথ ঠিক বের হয়।"],
+            ["যেমন কর্ম তেমন ফল।", "কাজ অনুযায়ীই ফল পাওয়া যায়।"],
+            ["সময় গেলে সাধন হবে না।", "সুযোগ চলে গেলে আর কাজ হয় না।"],
+            ["সোনায় সোহাগা।", "ভালোর সাথে আরও ভালোর মিলন।"]
+        ];
+
+        // ১১৪টি সূরার বিশুদ্ধ বাংলা নাম
+        const SURAH_NAMES_BN = [
+            "", "আল-ফাতিহা", "আল-বাকারা", "আলে ইমরান", "আন-নিসা", "আল-মায়িদাহ", "আল-আনআম", "আল-আরাফ", "আল-আনফাল", "আত-তাওবাহ", "ইউনুস",
+            "হুদ", "ইউসুফ", "আর-রাদ", "ইবরাহীম", "আল-হিজর", "আন-নাহল", "বনী ইসরাঈল", "আল-কাহফ", "মারইয়াম", "ত্বা-হা",
+            "আল-আম্বিয়া", "আল-হাজ্জ", "আল-মুমিনুন", "আন-নূর", "আল-ফুরকান", "আশ-শুআরা", "আন-নামল", "আল-কাসাস", "আল-আনকাবুত", "আর-রূম",
+            "লুকমান", "আস-সাজদাহ", "আল-আহযাব", "সাবা", "ফাতির", "ইয়াসীন", "আস-সাফফাত", "সোয়াদ", "আয-যুমার", "গাফির",
+            "হা-মীম সাজদাহ", "আশ-শূরা", "আয-যুখরুফ", "আদ-দুখান", "আল-জাসিয়াহ", "আল-আহকাফ", "মুহাম্মদ", "আল-ফাতহ", "আল-হুজুরাত", "ক্বাফ",
+            "আয-যারিয়াত", "আত-তূর", "আন-নাজম", "আল-ক্বামার", "আর-রাহমান", "আল-ওয়াকিয়াহ", "আল-হাদীদ", "আল-মুজাদালাহ", "আল-হাশর", "আল-মুমতাহিনাহ",
+            "আস-সাফ", "আল-জুমুআহ", "আল-মুনাফিকুন", "আত-তাগাবুন", "আত-তালাক", "আত-তাহরীম", "আল-মুলক", "আল-ক্বালাম", "আল-হাক্কাহ", "আল-মাআরিজ",
+            "নূহ", "আল-জিন", "আল-মুযযাম্মিল", "আল-মুদ্দাসসির", "আল-কিয়ামাহ", "আদ-দাহর", "আল-মুরসালাত", "আন-নাবা", "আন-নাযিআত", "আবাসা",
+            "আত-তাকভীর", "আল-ইনফিতার", "আল-মুতাফফিফীন", "আল-ইনশিকাক", "আল-বুরূজ", "আত-তারিক", "আল-আলা", "আল-গাশিয়াহ", "আল-ফাজর", "আল-বালাদ",
+            "আশ-শামস", "আল-লাইল", "আদ-দুহা", "আল-ইনশিরাহ", "আল-তীন", "আল-আলাক", "আল-ক্বদর", "আল-বাইয়্যিনাহ", "আয-যিলযাল", "আল-আদিয়াত",
+            "আল-ক্বারিয়াহ", "আত-তাকাসুর", "আল-আসর", "আল-হুমাযাহ", "আল-ফীল", "কুরাইশ", "আল-মাউন", "আল-কাওসার", "আল-কাফিরুন", "আন-নাসর",
+            "আল-লাহাব", "আল-ইখলাস", "আল-ফালাক", "আন-নাস"
+        ];
+
+        const BENGALI_QURAN_FALLBACK = [
+            "“হে মুমিনগণ! তোমরা ধৈর্য ও সালাতের মাধ্যমে সাহায্য প্রার্থনা করো। নিশ্চয়ই আল্লাহ ধৈর্যশীলদের সাথে আছেন।”\n— সূরা আল-বাকারা (২), আয়াত নং: ১৫৩",
+            "“নিশ্চয়ই কষ্টের সাথেই স্বস্তি রয়েছে। নিশ্চয়ই কষ্টের সাথেই স্বস্তি রয়েছে।”\n— সূরা আল-ইনশিরাহ (৯৪), আয়াত নং: ৫-৬",
+            "“তোমরা আমাকে স্মরণ করো, আমিও তোমাদের স্মরণ করব। আর আমার কৃতজ্ঞতা প্রকাশ করো, অকৃতজ্ঞ হয়ো না।”\n— সূরা আল-বাকারা (২), আয়াত নং: ১৫২",
+            "“আল্লাহ কারো ওপর তার সাধ্যের অতিরিক্ত বোঝা চাপিয়ে দেন না।”\n— সূরা আল-বাকারা (২), আয়াত নং: ২৮৬"
+        ];
+
+        const BENGALI_HADITH_FALLBACK = [
+            "“তোমাদের মধ্যে সেই ব্যক্তিই সর্বোত্তম, যে নিজে কুরআন শিক্ষা করে এবং অপরকে তা শিক্ষা দেয়।”\n— সহীহ বুখারী, হাদিস নং: ৫০২৭",
+            "“সমস্ত আমল নিয়তের ওপর নির্ভরশীল। আর প্রত্যেক ব্যক্তি তাই পাবে, যা সে নিয়ত করবে।”\n— সহীহ বুখারী, হাদিস নং: ১",
+            "“প্রকৃত মুসলিম সেই ব্যক্তি, যার জিহ্বা ও হাত থেকে অন্য মুসলিম নিরাপদ থাকে।”\n— সহীহ বুখারী, হাদিস নং: ১০",
+            "“তোমাদের কেউ প্রকৃত মুমিন হতে পারবে না, যতক্ষণ না সে নিজের জন্য যা পছন্দ করে তার ভাইয়ের জন্যও তাই পছন্দ করে।”\n— সহীহ বুখারী, হাদিস নং: ১৩",
+            "“যে ব্যক্তি আল্লাহ ও শেষ দিবসের প্রতি ঈমান রাখে, সে যেন উত্তম কথা বলে অথবা চুপ থাকে।”\n— সহীহ বুখারী, হাদিস নং: ৬০১৮",
+            "“পবিত্রতা ঈমানের অর্ধেক। আর ‘আলহামদুলিল্লাহ’ পাল্লাকে পরিপূর্ণ করে দেয়।”\n— সহীহ মুসলিম, হাদিস নং: ২২৩"
+        ];
+
+        const hasBengaliScript = str => /[\u0980-\u09FF]/.test(String(str || ''));
+        // ম্যানুয়াল কার্ডে যেকোনো ভাষার লেখা চলবে; অটো কার্ডে বাংলা থাকতে হবে
+        const validStory = (item, idx) => !!item && (item.mode === 'manual'
+            ? !!item.text
+            : hasBengaliScript(item.title) && (idx === 0 || idx === 3 || hasBengaliScript(item.text)));
+        const STORY_DEFAULTS = [
+            { id: 'st1', title: 'আজকের তারিখ ও সময়', text: '' },
+            { id: 'st2', title: 'আজকের কুরআন আয়াত', text: BENGALI_QURAN_FALLBACK[0] },
+            { id: 'st3', title: 'আজকের হাদিস', text: BENGALI_HADITH_FALLBACK[0] },
+            { id: 'st4', title: 'বাংলার প্রবাদ', text: '' },
+            { id: 'st5', title: 'সর্বশেষ সংবাদ', text: '• দেশের সর্বশেষ গুরুত্বপূর্ণ সংবাদ ও সমসাময়িক আপডেট\n— সূত্র: বাংলা সংবাদ ডেস্ক' }
+        ];
+        const storyOpen = {};
+
+        // ৫টি লাইভ কার্ড (সম্পূর্ণ বাংলা লেখা)
+        let fixedStories = [
+            { id: 'st1', title: 'আজকের তারিখ ও সময়', text: '' },
+            { id: 'st2', title: 'আজকের কুরআন আয়াত', text: BENGALI_QURAN_FALLBACK[0] },
+            { id: 'st3', title: 'আজকের হাদিস', text: BENGALI_HADITH_FALLBACK[0] },
+            { id: 'st4', title: 'বাংলার প্রবাদ', text: '' },
+            { id: 'st5', title: 'সর্বশেষ সংবাদ', text: '• দেশের সর্বশেষ গুরুত্বপূর্ণ সংবাদ ও সমসাময়িক আপডেট\n• শিক্ষা, কৃষি ও প্রযুক্তিতে এগিয়ে যাচ্ছে বাংলাদেশ\n— সূত্র: বাংলা সংবাদ ডেস্ক' }
+        ];
+
+        let storyIndex = 0;
+        let otherUpdatedAt = 0;
+        let newsUpdatedAt = 0;
+        let storyBusy = false;
+        let newsBusy = false;
+        let popupAutoCloseTimer = null;
+
+        // লোকাল ক্যাশ থেকে তাৎক্ষণিক লোড
+        try {
+            const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
+            if (cached && Array.isArray(cached.items) && cached.items.length === 5) {
+                cached.items.forEach((item, idx) => {
+                    if (validStory(item, idx)) {
+                        fixedStories[idx] = item;
+                    }
+                });
+                otherUpdatedAt = cached.otherUpdatedAt || 0;
+                newsUpdatedAt = cached.newsUpdatedAt || 0;
+            }
+        } catch (e) {}
+
+        function saveLocalStoriesCache() {
+            try {
+                localStorage.setItem(CACHE_KEY, JSON.stringify({
+                    items: fixedStories,
+                    otherUpdatedAt,
+                    newsUpdatedAt
+                }));
+            } catch (e) {}
+        }
+
+        let state = {
+            currentUser: null,
+            authReady: false,
+            adminIds: new Set(),
+            signingUp: false,
+            postLimit: 15,
+            postsMore: false,
+            memberQuery: '',
+            adminQuery: '',
+            users: [],
+            posts: [],
+            notifications: [],
+            currentView: 'login',
+            activeModalPostId: null,
+            viewingProfilePhone: null,
+            popupConfig: null,
+            popupDismissedId: null
+        };
+
+        const synced = { users: {}, posts: {}, notifications: {}, stories: JSON.stringify(fixedStories) };
+        const idOf = (col, o) => col === 'users' ? o.uid : o.id;
+        const strip = (col, o) => {
+            if (col !== 'users') return o;
+            const { isEditor, email, ...r } = o;
+            return r;
+        };
+        const byNewest = (a, b) => (b.createdAt || 0) - (a.createdAt || 0);
+
+        function esc(v) {
+            return String(v ?? '').replace(/[&<>"']/g, c => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            }[c]));
+        }
+
+        function safeUrl(u) {
+            u = String(u || '');
+            if (u.startsWith('data:image/')) return esc(u);
+            try {
+                const x = new URL(u);
+                return (x.protocol === 'https:' || x.protocol === 'http:') ? esc(u) : '';
+            } catch (e) { return ''; }
+        }
+
+        const bnNum = n => Number(n).toLocaleString('bn-BD', { useGrouping: false });
+        const toBnDigits = str => String(str).replace(/\d/g, d => '০১২৩৪৫৬৭৮৯'[d]);
+        const clip = (t, n) => {
+            t = String(t || '').replace(/\s+/g, ' ').trim();
+            return t.length > n ? t.slice(0, n - 1) + '…' : t;
+        };
+
+        function showToast(msg, isError = false) {
+            const old = document.getElementById('bk-toast');
+            if (old) old.remove();
+            const el = document.createElement('div');
+            el.id = 'bk-toast';
+            el.className = `fixed bottom-5 left-1/2 -translate-x-1/2 z-[100] px-4 py-2.5 rounded-xl text-xs font-semibold shadow-lg border ${
+                isError
+                    ? 'bg-neutral-900 text-white border-rose-500'
+                    : 'bg-neutral-900 text-emerald-100 border-emerald-700'
+            }`;
+            el.textContent = msg;
+            document.body.appendChild(el);
+            setTimeout(() => { if (el.parentNode) el.remove(); }, 3200);
+        }
+
+        function showPromptModal({ title, placeholder = '', type = 'text', defaultValue = '', confirmLabel = 'সংরক্ষণ' }) {
+            return new Promise(resolve => {
+                const overlay = document.createElement('div');
+                overlay.className = 'fixed inset-0 bg-neutral-900/50 backdrop-blur-xs z-[90] flex items-center justify-center p-4';
+                overlay.innerHTML = `
+                    <div class="bg-white border border-neutral-200 rounded-2xl max-w-sm w-full p-5 shadow-xl">
+                        <h3 class="text-base font-bold text-neutral-900 mb-3">${esc(title)}</h3>
+                        <input id="customPromptInput" type="${esc(type)}" value="${esc(defaultValue)}" placeholder="${esc(placeholder)}" class="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 focus:border-emerald-600 focus:outline-none text-sm mb-4">
+                        <div class="flex justify-end gap-2">
+                            <button type="button" id="customPromptCancel" class="px-4 py-2 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-xs font-bold">বাতিল</button>
+                            <button type="button" id="customPromptOk" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold">${esc(confirmLabel)}</button>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(overlay);
+                const input = overlay.querySelector('#customPromptInput');
+                input.focus();
+                const close = val => { overlay.remove(); resolve(val); };
+                overlay.querySelector('#customPromptCancel').onclick = () => close(null);
+                overlay.querySelector('#customPromptOk').onclick = () => close(input.value);
+                input.onkeydown = e => {
+                    if (e.key === 'Enter') { e.preventDefault(); close(input.value); }
+                    if (e.key === 'Escape') close(null);
+                };
+            });
+        }
+
+        function showConfirmModal(message, confirmLabel = 'হ্যাঁ, নিশ্চিত') {
+            return new Promise(resolve => {
+                const overlay = document.createElement('div');
+                overlay.className = 'fixed inset-0 bg-neutral-900/50 backdrop-blur-xs z-[90] flex items-center justify-center p-4';
+                overlay.innerHTML = `
+                    <div class="bg-white border border-neutral-200 rounded-2xl max-w-sm w-full p-5 shadow-xl">
+                        <p class="text-sm font-semibold text-neutral-800 mb-4 leading-relaxed">${esc(message)}</p>
+                        <div class="flex justify-end gap-2">
+                            <button type="button" id="confirmNo" class="px-4 py-2 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-xs font-bold">না</button>
+                            <button type="button" id="confirmYes" class="px-4 py-2 rounded-xl bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-bold">${esc(confirmLabel)}</button>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(overlay);
+                const close = val => { overlay.remove(); resolve(val); };
+                overlay.querySelector('#confirmNo').onclick = () => close(false);
+                overlay.querySelector('#confirmYes').onclick = () => close(true);
+            });
+        }
+
+        function getAutoAvatar() {
+            const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96"><rect width="96" height="96" fill="#dcfce7"/><circle cx="48" cy="38" r="17" fill="#15803d"/><path d="M14 96c2-22 18-32 34-32s32 10 34 32z" fill="#15803d"/></svg>';
+            return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+        }
+
+        document.addEventListener('error', e => {
+            const t = e.target;
+            if (!t || t.tagName !== 'IMG' || t.dataset.fb) return;
+            t.dataset.fb = 1;
+            if (t.alt === 'Post image' || t.alt === 'Popup image') t.parentElement.style.display = 'none';
+            else t.src = getAutoAvatar();
+        }, true);
+
+        function timeAgo(ts, fallback) {
+            if (!ts) return fallback || 'এইমাত্র';
+            const s = Math.floor((Date.now() - ts) / 1000);
+            if (s < 60) return 'এইমাত্র';
+            if (s < 3600) return bnNum(Math.floor(s / 60)) + ' মিনিট আগে';
+            if (s < 86400) return bnNum(Math.floor(s / 3600)) + ' ঘণ্টা আগে';
+            if (s < 2592000) return bnNum(Math.floor(s / 86400)) + ' দিন আগে';
+            return new Date(ts).toLocaleDateString('bn-BD', { year: 'numeric', month: 'long', day: 'numeric' });
+        }
+
+        // বাংলাদেশ স্ট্যান্ডার্ড সময় (BST, UTC+6)
+        function getBangladeshDateObj() {
+            const now = new Date();
+            const utcMs = now.getTime() + (now.getTimezoneOffset() * 60000);
+            return new Date(utcMs + (6 * 3600000));
+        }
+
+        function getStandardTimeBD() {
+            const d = getBangladeshDateObj();
+            const h = d.getHours();
+            const m = String(d.getMinutes()).padStart(2, '0');
+            const s = String(d.getSeconds()).padStart(2, '0');
+            let period = 'রাত';
+            if (h >= 4 && h < 6) period = 'ভোর';
+            else if (h >= 6 && h < 12) period = 'সকাল';
+            else if (h >= 12 && h < 15) period = 'দুপুর';
+            else if (h >= 15 && h < 18) period = 'বিকাল';
+            else if (h >= 18 && h < 20) period = 'সন্ধ্যা';
+            const h12 = h % 12 || 12;
+            return `${period} ${toBnDigits(h12)}:${toBnDigits(m)}:${toBnDigits(s)} (বাংলাদেশ সময়)`;
+        }
+
+        // সঠিক বাংলা সন (সংশোধিত বাংলা বর্ষপঞ্জি)
+        function banglaDate(d = getBangladeshDateObj()) {
+            const y = d.getFullYear();
+            let sy = y, by = y - 593;
+            if (Date.UTC(y, d.getMonth(), d.getDate()) < Date.UTC(y, 3, 14)) {
+                sy = y - 1;
+                by = y - 594;
+            }
+            let off = Math.round((Date.UTC(y, d.getMonth(), d.getDate()) - Date.UTC(sy, 3, 14)) / 864e5);
+            const ny = sy + 1;
+            const leap = (ny % 4 === 0 && ny % 100 !== 0) || ny % 400 === 0;
+            const lens = [31, 31, 31, 31, 31, 31, 30, 30, 30, 30, leap ? 30 : 29, 30];
+            const names = ['বৈশাখ', 'জ্যৈষ্ঠ', 'আষাঢ়', 'শ্রাবণ', 'ভাদ্র', 'আশ্বিন', 'কার্তিক', 'অগ্রহায়ণ', 'পৌষ', 'মাঘ', 'ফাল্গুন', 'চৈত্র'];
+            let m = 0;
+            while (m < 11 && off >= lens[m]) { off -= lens[m]; m++; }
+            return `${bnNum(off + 1)} ${names[m]} ${bnNum(by)} বাংলা সন`;
+        }
+
+        // সঠিক হিজরি তারিখ ও বাংলায় আরবি মাসের নাম
+        function hijriDateBD(d = getBangladeshDateObj()) {
+            const bdDay = new Date(d.getTime() - 864e5);
+            const hijriMonthsBn = [
+                'মুহররম', 'সফর', 'রবিউল আউয়াল', 'রবিউস সানি',
+                'জমাদিউল আউয়াল', 'জমাদিউস সানি', 'রজব', 'শাবান',
+                'রমজান', 'শাওয়াল', 'জিলকদ', 'জিলহজ'
+            ];
+
+            for (const cal of ['islamic-umalqura', 'islamic-civil', 'islamic']) {
+                try {
+                    const parts = new Intl.DateTimeFormat(`en-u-ca-${cal}`, {
+                        day: 'numeric',
+                        month: 'numeric',
+                        year: 'numeric'
+                    }).formatToParts(bdDay);
+                    const dayNum = parseInt(parts.find(p => p.type === 'day')?.value || '', 10);
+                    const monthNum = parseInt(parts.find(p => p.type === 'month')?.value || '', 10);
+                    const yearNum = parseInt(parts.find(p => p.type === 'year')?.value || '', 10);
+                    if (dayNum >= 1 && dayNum <= 30 && monthNum >= 1 && monthNum <= 12 && yearNum > 1400) {
+                        return `${bnNum(dayNum)} ${hijriMonthsBn[monthNum - 1]} ${bnNum(yearNum)} হিজরি`;
+                    }
+                } catch (e) {}
+            }
+
+            // ব্যাকআপ গাণিতিক হিজরি হিসাব
+            const jd = Math.floor((Date.UTC(bdDay.getFullYear(), bdDay.getMonth(), bdDay.getDate()) / 864e5) + 2440587.5);
+            let l = jd - 1948440 + 10632;
+            const n = Math.floor((l - 1) / 10631);
+            l = l - 10631 * n + 354;
+            const j = (Math.floor((10985 - l) / 5316)) * (Math.floor((50 * l) / 17719)) + (Math.floor(l / 5670)) * (Math.floor((43 * l) / 15238));
+            l = l - (Math.floor((30 - j) / 15)) * (Math.floor((17719 * j) / 50)) - (Math.floor(j / 16)) * (Math.floor((15238 * j) / 43)) + 29;
+            const hMonth = Math.floor((24 * l) / 709);
+            const hDay = l - Math.floor((709 * hMonth) / 24);
+            const hYear = 30 * n + j - 30;
+            const monthBn = hijriMonthsBn[Math.max(0, Math.min(11, hMonth - 1))];
+            return `${bnNum(hDay)} ${monthBn} ${bnNum(hYear)} হিজরি`;
+        }
+
+        function todayStoryText() {
+            const d = getBangladeshDateObj();
+            const weekdaysBn = ['রবিবার', 'সোমবার', 'মঙ্গলবার', 'বুধবার', 'বৃহস্পতিবার', 'শুক্রবার', 'শনিবার'];
+            const monthsBn = ['জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'];
+            const wd = weekdaysBn[d.getDay()];
+            const en = `${bnNum(d.getDate())} ${monthsBn[d.getMonth()]} ${bnNum(d.getFullYear())} খ্রিস্টাব্দ`;
+            const bn = banglaDate(d);
+            const ar = hijriDateBD(d);
+            return `বার: ${wd}\nইংরেজি: ${en}\nবাংলা: ${bn}\nআরবি: ${ar}`;
+        }
+
+        function liveStory(st) {
+            if (st.mode === 'manual') return st;
+            if (st.id === 'st1') return { ...st, text: todayStoryText() };
+            if (st.id === 'st4') {
+                const slot = Math.floor(Date.now() / OTHER_TTL);
+                const pr = PROVERBS[slot % PROVERBS.length];
+                return { ...st, text: `“${pr[0]}”\nঅর্থ: ${pr[1]}` };
+            }
+            return st;
+        }
+
+        // লাইভ স্ট্যান্ডার্ড ঘড়ি আপডেট (প্রতি সেকেন্ডে, পেজ রি-রেন্ডার না করে)
+        setInterval(() => {
+            const clockEl = document.getElementById('liveStandardClock');
+            if (clockEl) clockEl.textContent = getStandardTimeBD();
+        }, 1000);
+
+        async function fetchJson(url, ms = 7500) {
+            const c = new AbortController();
+            const t = setTimeout(() => c.abort(), ms);
+            try {
+                const r = await fetch(url, { signal: c.signal });
+                if (!r.ok) throw new Error(r.status);
+                return await r.json();
+            } finally { clearTimeout(t); }
+        }
+
+        // ---------- রিয়েল সংবাদ সোর্স (একাধিক বাংলা পত্রিকার RSS) ----------
+        const NEWS_SOURCES = [
+            { name: 'বিবিসি বাংলা', rss: 'https://feeds.bbci.co.uk/bengali/rss.xml' },
+            { name: 'প্রথম আলো', rss: 'https://www.prothomalo.com/feed/' },
+            { name: 'যুগান্তর', rss: 'https://www.jugantor.com/feed/rss.xml' },
+            { name: 'কালের কণ্ঠ', rss: 'https://www.kalerkantho.com/rss.xml' },
+            { name: 'জাগো নিউজ', rss: 'https://www.jagonews24.com/rss/rss.xml' },
+            { name: 'বাংলা নিউজ ২৪', rss: 'https://www.banglanews24.com/rss/rss.xml' }
+        ];
+        const isHttpLink = u => /^https?:\/\//i.test(String(u || ''));
+        const isManual = i => !!(fixedStories[i] && fixedStories[i].mode === 'manual');
+
+        function parseFeedTime(p) {
+            p = String(p || '').trim();
+            if (/^\d{4}-\d\d-\d\d \d\d:\d\d:\d\d$/.test(p)) return Date.parse(p.replace(' ', 'T') + 'Z') || 0;
+            const t = Date.parse(p);
+            return isNaN(t) ? 0 : Math.min(t, Date.now());
+        }
+
+        function parseFeedXml(xml, srcName) {
+            const doc = new DOMParser().parseFromString(xml, 'text/xml');
+            return Array.from(doc.querySelectorAll('item')).slice(0, 15).map(it => {
+                const g = tag => (it.querySelector(tag)?.textContent || '').trim();
+                return { title: g('title'), link: g('link'), time: parseFeedTime(g('pubDate')), source: srcName };
+            });
+        }
+
+        async function fetchFeedItems(src) {
+            // ১ম চেষ্টা: rss2json; ব্যর্থ হলে ২য় চেষ্টা: সরাসরি RSS XML (প্রক্সি দিয়ে)
+            try {
+                const f = await fetchJson('https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent(src.rss), 6500);
+                if (f.status && f.status !== 'ok') throw new Error('rss2json');
+                const items = (f.items || []).slice(0, 15).map(i => ({
+                    title: i.title, link: i.link, time: parseFeedTime(i.pubDate), source: src.name
+                }));
+                if (items.length) return items;
+            } catch (e) {}
+            const c = new AbortController();
+            const t = setTimeout(() => c.abort(), 6500);
+            try {
+                const r = await fetch('https://api.allorigins.win/raw?url=' + encodeURIComponent(src.rss), { signal: c.signal });
+                if (!r.ok) throw new Error(r.status);
+                return parseFeedXml(await r.text(), src.name);
+            } finally { clearTimeout(t); }
+        }
+
+        async function pushStoriesToCloud(extra = {}) {
+            try {
+                await db.collection('config').doc('stories').set({
+                    items: fixedStories,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    ...extra
+                }, { merge: true });
+                synced.stories = JSON.stringify(fixedStories);
+                return true;
+            } catch (e) {
+                showToast('সংরক্ষণ করা যায়নি। আবার চেষ্টা করুন।', true);
+                return false;
+            }
+        }
+
+        async function refreshNewsEveryHour(force = false) {
+            if (!auth.currentUser || newsBusy) return false;
+            if (isManual(4)) {
+                if (force) showToast('সংবাদ কার্ড এখন ম্যানুয়াল মোডে আছে। অটোতে ফেরালে আপডেট হবে।', true);
+                return false;
+            }
+            if (!force && (Date.now() - newsUpdatedAt < NEWS_TTL)) return false;
+            newsBusy = true;
+            try {
+                const results = await Promise.allSettled(NEWS_SOURCES.map(fetchFeedItems));
+                const now = Date.now();
+                let all = [];
+                let liveSources = 0;
+                results.forEach(r => {
+                    if (r.status === 'fulfilled' && r.value.length) { liveSources++; all = all.concat(r.value); }
+                });
+                all = all
+                    .map(i => ({ ...i, title: clip(i.title, 110) }))
+                    .filter(i => hasBengaliScript(i.title) && isHttpLink(i.link))
+                    .filter(i => !i.time || now - i.time < 48 * 3600 * 1000);
+                all.sort((a, b) => (b.time || 0) - (a.time || 0));
+
+                const cap = liveSources >= 3 ? 2 : 4;
+                const perSrc = {};
+                const seen = new Set();
+                const picked = [];
+                for (const i of all) {
+                    const key = i.title.replace(/[\s\u200c\u200d।,.\-–:‘’“”"']/g, '').slice(0, 40);
+                    if (seen.has(key) || (perSrc[i.source] || 0) >= cap) continue;
+                    seen.add(key);
+                    perSrc[i.source] = (perSrc[i.source] || 0) + 1;
+                    picked.push(i);
+                    if (picked.length >= 6) break;
+                }
+                if (!picked.length) {
+                    if (force) showToast('এই মুহূর্তে কোনো সোর্স থেকে সংবাদ আনা যায়নি।', true);
+                    return false;
+                }
+                const news = picked.map(i => ({ t: i.title, u: i.link, s: i.source, d: i.time || 0 }));
+                const text = news.map(n => '• ' + n.t + ' (' + n.s + ')').join('\n')
+                    + '\n— সূত্র: ' + [...new Set(news.map(n => n.s))].join(', ');
+                fixedStories[4] = { id: 'st5', title: 'সর্বশেষ সংবাদ', text, news };
+                newsUpdatedAt = Date.now();
+                saveLocalStoriesCache();
+                if (state.currentUser?.isEditor) {
+                    db.collection('config').doc('stories').set({
+                        items: fixedStories,
+                        newsUpdatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    }, { merge: true }).catch(() => {});
+                }
+                render();
+                if (force) showToast('সর্বশেষ সংবাদ আপডেট হয়েছে!');
+                return true;
+            } catch (e) {
+                return false;
+            } finally {
+                newsBusy = false;
+            }
+        }
+
+        async function refreshOtherStoriesEvery6Hours(force = false) {
+            if (!auth.currentUser || storyBusy) return false;
+            const skipAyah = isManual(1), skipHadith = isManual(2);
+            if (skipAyah && skipHadith) {
+                if (force) showToast('কুরআন ও হাদিস কার্ড এখন ম্যানুয়াল মোডে আছে।', true);
+                return false;
+            }
+            if (!force && (Date.now() - otherUpdatedAt < OTHER_TTL)) return false;
+            storyBusy = true;
+            try {
+                const slot = force ? Math.floor(Date.now() / 1000) : Math.floor(Date.now() / OTHER_TTL);
+                const next = fixedStories.map(x => ({ ...x }));
+                let ok = 0;
+
+                await Promise.all([
+                    // কুরআন: আরবি (উসমানী) + বাংলা অনুবাদ, একই কলে; সংক্ষিপ্ত আয়াত বেছে নেওয়া হয়
+                    skipAyah ? null : (async () => {
+                        for (let a = 0; a < 4; a++) {
+                            try {
+                                const n = ((slot * 37 + a * 911) % 6236) + 1;
+                                const d = (await fetchJson('https://api.alquran.cloud/v1/ayah/' + n + '/editions/quran-uthmani,bn.bengali')).data;
+                                if (!Array.isArray(d)) continue;
+                                const ar = d.find(x => x.edition && x.edition.identifier === 'quran-uthmani');
+                                const bn = d.find(x => x.edition && x.edition.identifier === 'bn.bengali');
+                                if (!bn || !hasBengaliScript(bn.text) || bn.text.length > 320) continue;
+                                const sNum = bn.surah.number;
+                                const surahBn = SURAH_NAMES_BN[sNum] || `সূরা ${bnNum(sNum)}`;
+                                const arabic = ar && ar.text && ar.text.length < 400 ? ar.text.trim() + '\n\n' : '';
+                                next[1] = {
+                                    id: 'st2',
+                                    title: 'আজকের কুরআন আয়াত',
+                                    text: `${arabic}“${bn.text.trim()}”\n— সূরা ${surahBn} (${bnNum(sNum)}), আয়াত নং: ${bnNum(bn.numberInSurah)}`
+                                };
+                                ok++;
+                                return;
+                            } catch (e) {}
+                        }
+                    })(),
+                    // হাদিস: বুখারী, মুসলিম, আবু দাউদ (বাংলা সংস্করণ) থেকে সংক্ষিপ্ত হাদিস
+                    skipHadith ? null : (async () => {
+                        const editions = [
+                            ['ben-bukhari', 4000, 'সহীহ বুখারী'],
+                            ['ben-muslim', 3000, 'সহীহ মুসলিম'],
+                            ['ben-abudawud', 3500, 'সুনানে আবু দাউদ']
+                        ];
+                        for (const [ed, max, name] of editions) {
+                            for (let a = 0; a < 3; a++) {
+                                try {
+                                    const n = ((slot * 53 + a * 617) % max) + 1;
+                                    const h = await fetchJson(`https://cdn.jsdelivr.net/gh/fawazahmed0/hadith-api@1/editions/${ed}/${n}.json`);
+                                    const first = h.hadiths && h.hadiths[0];
+                                    const t = (h.text || (first && first.text) || '').trim();
+                                    if (!t || !hasBengaliScript(t) || t.length > 380) continue;
+                                    const num = h.hadithnumber || (first && first.hadithnumber) || n;
+                                    next[2] = {
+                                        id: 'st3',
+                                        title: 'আজকের হাদিস',
+                                        text: `“${t}”\n— ${name}, হাদিস নং: ${bnNum(num)}`
+                                    };
+                                    ok++;
+                                    return;
+                                } catch (e) {}
+                            }
+                        }
+                    })()
+                ]);
+
+                // কিছুই আনা না গেলে আগের (সত্যিকারের) কার্ডই থাকবে; পরের ৩০ মিনিটে আবার চেষ্টা হবে
+                if (ok === 0) {
+                    if (force) showToast('এই মুহূর্তে কুরআন/হাদিস আনা যায়নি। পরে আবার চেষ্টা করুন।', true);
+                    return false;
+                }
+                fixedStories = next;
+                otherUpdatedAt = Date.now();
+                saveLocalStoriesCache();
+                if (state.currentUser?.isEditor) {
+                    db.collection('config').doc('stories').set({
+                        items: fixedStories,
+                        otherUpdatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    }, { merge: true }).catch(() => {});
+                }
+                render();
+                if (force) showToast('কুরআন ও হাদিস আপডেট হয়েছে!');
+                return true;
+            } catch (e) {
+                return false;
+            } finally {
+                storyBusy = false;
+            }
+        }
+
+        // ---------- এডিটরের ম্যানুয়াল কার্ড কন্ট্রোল ----------
+        async function saveStoryCard(i) {
+            if (!state.currentUser?.isEditor) return;
+            const base = fixedStories[i];
+            const mode = document.getElementById('cardMode_' + i).value;
+            const title = document.getElementById('cardTitle_' + i).value.trim();
+            const text = document.getElementById('cardText_' + i).value.trim();
+            if (mode === 'manual') {
+                if (!title || !text) {
+                    showToast('ম্যানুয়াল কার্ডে শিরোনাম ও লেখা দুটোই দিন!', true);
+                    return;
+                }
+                fixedStories[i] = { id: base.id, title, text, mode: 'manual' };
+            } else {
+                fixedStories[i] = { ...STORY_DEFAULTS[i] };
+            }
+            saveLocalStoriesCache();
+            await pushStoriesToCloud();
+            render();
+            if (mode === 'manual') {
+                showToast('কার্ড ম্যানুয়াল মোডে সংরক্ষণ হয়েছে।');
+            } else {
+                showToast('কার্ড অটো মোডে ফিরেছে।');
+                if (i === 4) refreshNewsEveryHour(true);
+                else if (i === 1 || i === 2) refreshOtherStoriesEvery6Hours(true);
+            }
+        }
+
+        function toggleStoryOpen(id) {
+            storyOpen[id] = !storyOpen[id];
+            render();
+        }
+
+        setInterval(() => refreshNewsEveryHour(false), 15 * 60 * 1000);
+        setInterval(() => refreshOtherStoriesEvery6Hours(false), 30 * 60 * 1000);
+
+        async function saveDataToCloud() {
+            if (!auth.currentUser) return;
+            try {
+                const batch = db.batch();
+                let n = 0;
+                for (const col of ['users', 'posts', 'notifications']) {
+                    const cur = {};
+                    state[col].forEach(o => { cur[idOf(col, o)] = strip(col, o); });
+                    for (const id in cur) {
+                        const j = JSON.stringify(cur[id]);
+                        if (synced[col][id] !== j) {
+                            batch.set(db.collection(col).doc(id), cur[id]);
+                            synced[col][id] = j;
+                            n++;
+                        }
+                    }
+                    for (const id in synced[col]) {
+                        if (!(id in cur)) {
+                            batch.delete(db.collection(col).doc(id));
+                            delete synced[col][id];
+                            n++;
+                        }
+                    }
+                }
+                const st = JSON.stringify(fixedStories);
+                if (state.currentUser && state.currentUser.isEditor && st !== synced.stories) {
+                    batch.set(db.collection('config').doc('stories'), {
+                        items: fixedStories,
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    }, { merge: true });
+                    synced.stories = st;
+                    n++;
+                }
+                if (n) await batch.commit();
+            } catch (error) {
+                console.error('Cloud Save Error:', error);
+                showToast('সংরক্ষণ করা যায়নি। আবার চেষ্টা করুন।', true);
+            }
+        }
+
+        function applyMe() {
+            const au = auth.currentUser;
+            if (!au) return false;
+            const emailMatchEditor = (au.email || '').toLowerCase() === EDITOR_EMAIL;
+            state.users.forEach(u => {
+                u.isEditor = state.adminIds.has(u.uid) || (emailMatchEditor && u.uid === au.uid);
+            });
+            let me = state.users.find(u => u.uid === au.uid);
+            if (!me && emailMatchEditor) {
+                me = {
+                    uid: au.uid,
+                    name: 'প্রধান সম্পাদক',
+                    phone: '+8801700000000',
+                    profession: 'সম্পাদক',
+                    age: '৩০',
+                    location: 'ঢাকা',
+                    sscBatch: '2015',
+                    profilePhoto: getAutoAvatar(),
+                    isEditor: true
+                };
+                state.users.push(me);
+                db.collection('users').doc(au.uid).set(strip('users', me), { merge: true }).catch(() => {});
+                db.collection('admins').doc(au.uid).set({ email: EDITOR_EMAIL, role: 'editor' }, { merge: true }).catch(() => {});
+            }
+            if (!me) return false;
+            const first = !state.currentUser;
+            state.currentUser = Object.assign({}, me, {
+                email: au.email,
+                isEditor: state.adminIds.has(au.uid) || emailMatchEditor
+            });
+            if (first) {
+                state.authReady = true;
+                if (state.currentView === 'login' || state.currentView === 'signup') state.currentView = 'feed';
+                startNotifListener(me.phone);
+                refreshNewsEveryHour(false);
+                refreshOtherStoriesEvery6Hours(false);
+            }
+            return true;
+        }
+
+        let unsubs = [], notifUnsub = null, postsUnsub = null;
+
+        function stopListeners() {
+            unsubs.forEach(u => u());
+            unsubs = [];
+            if (notifUnsub) { notifUnsub(); notifUnsub = null; }
+            if (postsUnsub) { postsUnsub(); postsUnsub = null; }
+        }
+
+        function startNotifListener(phone) {
+            if (notifUnsub) notifUnsub();
+            notifUnsub = db.collection('notifications').where('recipientPhone', '==', phone).onSnapshot(snap => {
+                state.notifications = snap.docs.map(d => d.data()).sort(byNewest);
+                synced.notifications = {};
+                state.notifications.forEach(o => { synced.notifications[o.id] = JSON.stringify(o); });
+                render();
+            }, e => console.error(e));
+        }
+
+        function startPostsListener() {
+            if (postsUnsub) postsUnsub();
+            postsUnsub = db.collection('posts').orderBy('createdAt', 'desc').limit(state.postLimit).onSnapshot(snap => {
+                state.postsMore = snap.docs.length >= state.postLimit;
+                state.posts = snap.docs.map(d => d.data());
+                synced.posts = {};
+                state.posts.forEach(o => { synced.posts[o.id] = JSON.stringify(o); });
+                render();
+            }, e => console.error(e));
+        }
+
+        function loadMorePosts() {
+            state.postLimit += 15;
+            startPostsListener();
+        }
+
+        function startListeners() {
+            const err = e => console.error(e);
+            unsubs.push(db.collection('admins').onSnapshot(snap => {
+                state.adminIds = new Set(snap.docs.map(d => d.id));
+                applyMe();
+                render();
+            }, err));
+            unsubs.push(db.collection('users').onSnapshot(snap => {
+                state.users = snap.docs.map(d => d.data());
+                synced.users = {};
+                state.users.forEach(o => { synced.users[o.uid] = JSON.stringify(strip('users', o)); });
+                if (!applyMe() && !state.signingUp && !snap.metadata.fromCache && !snap.metadata.hasPendingWrites) {
+                    auth.signOut();
+                    return;
+                }
+                render();
+            }, err));
+            startPostsListener();
+            unsubs.push(db.collection('config').doc('stories').onSnapshot(d => {
+                if (d.exists && Array.isArray(d.data().items)) {
+                    const cloudItems = d.data().items;
+                    cloudItems.forEach((item, idx) => {
+                        if (idx < 5 && validStory(item, idx)) {
+                            fixedStories[idx] = item;
+                        }
+                    });
+                    synced.stories = JSON.stringify(fixedStories);
+                    const nTs = d.data().newsUpdatedAt || d.data().updatedAt;
+                    const oTs = d.data().otherUpdatedAt || d.data().updatedAt;
+                    if (nTs && nTs.toMillis) newsUpdatedAt = nTs.toMillis();
+                    if (oTs && oTs.toMillis) otherUpdatedAt = oTs.toMillis();
+                    saveLocalStoriesCache();
+                }
+                render();
+                refreshNewsEveryHour(false);
+                refreshOtherStoriesEvery6Hours(false);
+            }, err));
+            // এডিটর প্যানেল থেকে সেট করা পপআপ উইন্ডো রিয়েল-টাইম লিসেনার
+            unsubs.push(db.collection('config').doc('popup').onSnapshot(d => {
+                state.popupConfig = d.exists ? d.data() : null;
+                render();
+            }, err));
+        }
+
+        // সরাসরি অথেনটিকেশন (কোনো ইমেইল ভেরিফিকেশন ছাড়াই)
+        auth.onAuthStateChanged(async user => {
+            stopListeners();
+            if (!user) {
+                state.currentUser = null;
+                state.notifications = [];
+                state.popupDismissedId = null;
+                state.authReady = true;
+                if (state.currentView !== 'signup') state.currentView = 'login';
+                render();
+                return;
+            }
+            try {
+                const pd = await db.collection('pending').doc(user.uid).get();
+                if (pd.exists) {
+                    const d = pd.data();
+                    const b = db.batch();
+                    b.set(db.collection('phones').doc(d.phone.replace('+', '')), { uid: user.uid, email: user.email });
+                    b.set(db.collection('users').doc(user.uid), d.profile);
+                    b.delete(db.collection('pending').doc(user.uid));
+                    await b.commit();
+                }
+            } catch (e) {}
+            state.signingUp = false;
+            state.popupDismissedId = null;
+            startListeners();
+        });
+
+        function renderNavbar() {
+            if (!state.currentUser) return '';
+            const unreadCount = state.notifications.filter(n => n.recipientPhone === state.currentUser.phone && !n.isRead).length;
+
+            return `
+                <header class="bg-white border-b border-neutral-200 sticky top-0 z-40">
+                    <div class="max-w-3xl mx-auto px-4 py-3 flex justify-between items-center">
+                        <div class="cursor-pointer flex items-center gap-2.5" onclick="switchView('feed')">
+                            <span class="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold text-base">বৈ</span>
+                            <span class="text-xl font-bold text-neutral-900 tracking-tight">বৈঠকখানা</span>
+                        </div>
+                        <div class="flex items-center space-x-3 sm:space-x-5 text-sm font-medium">
+                            <button onclick="switchView('feed')" class="px-3 py-1.5 rounded-xl flex items-center space-x-1.5 transition ${state.currentView === 'feed' ? 'bg-emerald-50 text-emerald-800 font-bold border border-emerald-200' : 'text-neutral-600 hover:bg-neutral-100'}">
+                                <i class="fa-solid fa-house text-xs"></i> <span class="hidden sm:inline">ফিড</span>
+                            </button>
+                            <button onclick="switchView('notifications')" class="px-3 py-1.5 rounded-xl relative flex items-center space-x-1.5 transition ${state.currentView === 'notifications' ? 'bg-emerald-50 text-emerald-800 font-bold border border-emerald-200' : 'text-neutral-600 hover:bg-neutral-100'}">
+                                <i class="fa-solid fa-bell text-xs"></i> <span class="hidden sm:inline">বিজ্ঞপ্তি</span>
+                                ${unreadCount > 0 ? `<span class="bg-neutral-900 text-white text-[10px] px-1.5 py-0.2 rounded-full font-bold">${bnNum(unreadCount)}</span>` : ''}
+                            </button>
+                            <div class="relative">
+                                <button onclick="toggleSubmenu(event)" class="flex items-center space-x-1.5 focus:outline-none p-1 rounded-full hover:bg-neutral-100">
+                                    <img src="${safeUrl(state.currentUser.profilePhoto)}" alt="Profile" class="w-8 h-8 rounded-full border border-emerald-300 object-cover bg-white">
+                                    <i class="fa-solid fa-angle-down text-xs text-neutral-600 pr-1"></i>
+                                </button>
+                                <div id="navSubmenu" class="absolute right-0 mt-2 w-48 bg-white text-neutral-800 rounded-2xl shadow-xl py-1.5 hidden border border-neutral-200 z-50">
+                                    <button onclick="viewMyProfile()" class="w-full text-left px-4 py-2 hover:bg-emerald-50 hover:text-emerald-800 flex items-center space-x-2 text-xs font-semibold">
+                                        <i class="fa-solid fa-user text-emerald-600 w-4"></i> <span>প্রোফাইল</span>
+                                    </button>
+                                    <button onclick="switchView('all_members')" class="w-full text-left px-4 py-2 hover:bg-emerald-50 hover:text-emerald-800 flex items-center space-x-2 text-xs font-semibold">
+                                        <i class="fa-solid fa-users text-emerald-600 w-4"></i> <span>সকল সদস্য</span>
+                                    </button>
+                                    ${state.currentUser.isEditor ? `
+                                        <button onclick="switchView('editor_panel')" class="w-full text-left px-4 py-2 hover:bg-emerald-50 hover:text-emerald-800 flex items-center space-x-2 text-xs font-semibold border-t border-neutral-100">
+                                            <i class="fa-solid fa-sliders text-neutral-900 w-4"></i> <span>অ্যাডমিন প্যানেল</span>
+                                        </button>
+                                    ` : ''}
+                                    <div class="border-t border-neutral-100 my-1"></div>
+                                    <button onclick="logout()" class="w-full text-left px-4 py-2 hover:bg-neutral-100 text-neutral-700 flex items-center space-x-2 text-xs font-semibold">
+                                        <i class="fa-solid fa-right-from-bracket text-neutral-500 w-4"></i> <span>লগ আউট</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </header>
+            `;
+        }
+
+        function toggleSubmenu(e) {
+            e.stopPropagation();
+            const menu = document.getElementById('navSubmenu');
+            if (menu) menu.classList.toggle('hidden');
+        }
+
+        window.addEventListener('click', () => {
+            const menu = document.getElementById('navSubmenu');
+            if (menu && !menu.classList.contains('hidden')) menu.classList.add('hidden');
+        });
+
+        function renderLogin() {
+            return `
+                <div class="min-h-screen flex items-center justify-center bg-neutral-50 px-4 py-12">
+                    <div class="max-w-md w-full bg-white rounded-2xl border border-neutral-200 p-8 shadow-sm">
+                        <div class="text-center mb-7">
+                            <div class="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center justify-center font-bold text-xl mx-auto mb-3">বৈ</div>
+                            <h1 class="text-3xl font-bold text-neutral-900 mb-1">বৈঠকখানা</h1>
+                            <p class="text-neutral-500 text-xs">সহজ ও পরিচ্ছন্ন বাংলা সামাজিক মাধ্যম</p>
+                        </div>
+                        <form onsubmit="handleLogin(event)" class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-neutral-700 mb-1">ইমেইল বা মোবাইল নম্বর</label>
+                                <input type="text" id="loginPhone" required autocomplete="username" placeholder="name@example.com অথবা 01712345678" class="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 focus:border-emerald-600 focus:outline-none text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-neutral-700 mb-1">পাসওয়ার্ড</label>
+                                <input type="password" id="loginPassword" required placeholder="••••••••" class="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 focus:border-emerald-600 focus:outline-none text-sm">
+                            </div>
+                            <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl transition text-sm">লগ ইন করুন</button>
+                        </form>
+                        <div class="flex justify-between items-center mt-5 text-xs">
+                            <button onclick="recoverPasswordPrompt()" class="text-neutral-600 hover:text-neutral-900 hover:underline font-medium">পাসওয়ার্ড ভুলে গেছেন?</button>
+                            <button onclick="switchView('signup')" class="text-emerald-700 font-bold hover:underline">নতুন একাউন্ট খুলুন</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderSignup() {
+            return `
+                <div class="min-h-screen flex items-center justify-center bg-neutral-50 px-4 py-10">
+                    <div class="max-w-lg w-full bg-white rounded-2xl border border-neutral-200 p-7 shadow-sm">
+                        <div class="text-center mb-6">
+                            <h1 class="text-2xl font-bold text-neutral-900 mb-1">নতুন একাউন্ট তৈরি করুন</h1>
+                            <p class="text-neutral-500 text-xs">কোনো ইমেইল ভেরিফিকেশন ছাড়াই সরাসরি যুক্ত হোন</p>
+                        </div>
+                        <form onsubmit="handleSignup(event)" class="space-y-3.5">
+                            <div>
+                                <label class="block text-xs font-semibold text-neutral-700 mb-1">পূর্ণ নাম</label>
+                                <input type="text" id="signupName" required placeholder="আপনার পূর্ণ নাম" class="w-full px-3.5 py-2 rounded-xl border border-neutral-300 focus:border-emerald-600 focus:outline-none text-sm">
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs font-semibold text-neutral-700 mb-1">ইমেইল</label>
+                                    <input type="email" id="signupEmail" required placeholder="example@gmail.com" class="w-full px-3.5 py-2 rounded-xl border border-neutral-300 focus:border-emerald-600 focus:outline-none text-sm">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-neutral-700 mb-1">পাসওয়ার্ড (কমপক্ষে ৬ অক্ষর)</label>
+                                    <input type="password" id="signupPassword" required minlength="6" placeholder="••••••" class="w-full px-3.5 py-2 rounded-xl border border-neutral-300 focus:border-emerald-600 focus:outline-none text-sm">
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs font-semibold text-neutral-700 mb-1">মোবাইল (+880 এর পর ১০ ডিজিট)</label>
+                                    <div class="flex">
+                                        <span class="inline-flex items-center px-2.5 rounded-l-xl border border-r-0 border-neutral-300 bg-neutral-100 text-neutral-700 text-xs font-bold">+880</span>
+                                        <input type="text" id="signupPhone" required pattern="1[0-9]{9}" placeholder="1712345678" maxlength="10" class="w-full px-3 py-2 rounded-r-xl border border-neutral-300 focus:border-emerald-600 focus:outline-none text-sm">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-neutral-700 mb-1">বয়স</label>
+                                    <input type="number" id="signupAge" min="10" max="100" required placeholder="২৫" class="w-full px-3.5 py-2 rounded-xl border border-neutral-300 focus:border-emerald-600 focus:outline-none text-sm">
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs font-semibold text-neutral-700 mb-1">পেশা</label>
+                                    <select id="signupProfession" class="w-full px-3 py-2 rounded-xl border border-neutral-300 focus:border-emerald-600 focus:outline-none text-sm bg-white">
+                                        ${professions.map(p => `<option value="${esc(p)}">${esc(p)}</option>`).join('')}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-neutral-700 mb-1">এসএসসি ব্যাচ</label>
+                                    <input type="text" id="signupBatch" required pattern="[0-9]{4}" maxlength="4" placeholder="2015" class="w-full px-3.5 py-2 rounded-xl border border-neutral-300 focus:border-emerald-600 focus:outline-none text-sm">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-neutral-700 mb-1">ঠিকানা</label>
+                                <input type="text" id="signupLocation" required placeholder="জেলা বা এলাকা" class="w-full px-3.5 py-2 rounded-xl border border-neutral-300 focus:border-emerald-600 focus:outline-none text-sm">
+                            </div>
+                            <button type="submit" id="signupSubmitBtn" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl transition text-sm mt-1">সাইন আপ করুন</button>
+                        </form>
+                        <div class="mt-4 text-center">
+                            <p class="text-xs text-neutral-600">ইতিমধ্যে একাউন্ট আছে? <button onclick="switchView('login')" class="text-emerald-700 font-bold hover:underline">লগ ইন করুন</button></p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderFeed() {
+            const currentStory = liveStory(fixedStories[storyIndex % fixedStories.length]);
+            const storyIcons = { st1: 'fa-calendar-days', st2: 'fa-book-quran', st3: 'fa-book-open', st4: 'fa-feather-pointed', st5: 'fa-newspaper' };
+            const visiblePosts = state.posts;
+
+            return `
+                ${renderNavbar()}
+                <main class="max-w-2xl mx-auto px-4 py-5 flex-grow w-full space-y-5">
+                    <!-- হালকা সবুজ ও সাদা-কালো লাইভ ইনফো কার্ড (৫টি বাংলা কার্ড) -->
+                    <div class="soft-green-box p-4 sm:p-5">
+                        <div class="flex items-start gap-3.5">
+                            <div class="w-10 h-10 rounded-xl bg-white border border-emerald-200 text-emerald-700 flex items-center justify-center flex-shrink-0">
+                                <i class="fa-solid ${storyIcons[currentStory.id] || 'fa-star'} text-base"></i>
+                            </div>
+                            <div class="flex-grow min-w-0">
+                                <div class="flex flex-wrap items-center justify-between gap-1.5">
+                                    <span class="text-xs font-bold text-emerald-900">
+                                        ${esc(currentStory.title)}${currentStory.id === 'st5' && currentStory.mode !== 'manual' && newsUpdatedAt ? ' · ' + timeAgo(newsUpdatedAt) : ''}
+                                    </span>
+                                    ${currentStory.id === 'st1' && currentStory.mode !== 'manual' ? `
+                                        <span id="liveStandardClock" class="text-[11px] font-bold bg-white text-neutral-900 border border-emerald-200 px-2.5 py-0.5 rounded-full tabular-nums">
+                                            ${esc(getStandardTimeBD())}
+                                        </span>
+                                    ` : ''}
+                                </div>
+                                ${renderStoryBody(currentStory)}
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between mt-3.5 pt-2.5 border-t border-emerald-200/70">
+                            <div class="flex gap-1.5">
+                                ${fixedStories.map((_, i) => `<button onclick="goStory(${i})" aria-label="কার্ড ${bnNum(i + 1)}" class="h-1.5 rounded-full transition-all ${i === storyIndex % fixedStories.length ? 'w-6 bg-emerald-700' : 'w-2 bg-emerald-300'}"></button>`).join('')}
+                            </div>
+                            <button onclick="nextStory()" class="bg-white hover:bg-emerald-100 text-neutral-900 border border-emerald-200 px-3.5 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 transition">
+                                পরবর্তী <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- পোস্ট তৈরির বক্স -->
+                    <div class="clean-card p-4">
+                        <div class="flex items-center space-x-3 mb-3">
+                            <img src="${safeUrl(state.currentUser.profilePhoto)}" class="w-9 h-9 rounded-full border border-neutral-200 object-cover">
+                            <div>
+                                <h4 class="font-bold text-sm text-neutral-900">${esc(state.currentUser.name)}</h4>
+                                <span class="text-[11px] bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded-full font-medium">${esc(state.currentUser.profession)}</span>
+                            </div>
+                        </div>
+                        <form onsubmit="handleCreatePost(event)" class="space-y-2.5">
+                            <textarea id="postContent" rows="3" maxlength="5000" placeholder="আজ আপনার মনে কী চলছে?" class="w-full p-3 rounded-xl border border-neutral-200 focus:border-emerald-600 focus:outline-none text-sm resize-none"></textarea>
+                            <div class="flex items-center justify-between gap-2">
+                                <input type="text" id="postImage" placeholder="ছবির লিংক (ঐচ্ছিক)" class="w-2/3 px-3 py-2 rounded-xl border border-neutral-200 text-xs focus:border-emerald-600 focus:outline-none">
+                                <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition">পোস্ট করুন</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- পোস্ট ফিড -->
+                    <div class="space-y-4">
+                        ${visiblePosts.length === 0 ? '<p class="text-center text-neutral-500 py-10 text-sm">এখনো কোনো পোস্ট নেই।</p>' : ''}
+                        ${visiblePosts.map(post => renderPostCard(post)).join('')}
+                        ${state.postsMore ? '<button onclick="loadMorePosts()" class="w-full py-2.5 rounded-xl bg-white border border-neutral-200 text-neutral-800 text-xs font-bold hover:bg-emerald-50 transition">আরও পোস্ট দেখুন</button>' : ''}
+                    </div>
+                </main>
+            `;
+        }
+
+        function renderStoryBody(st) {
+            const open = !!storyOpen[st.id];
+            const toggle = label => `<button onclick="toggleStoryOpen('${st.id}')" class="mt-1.5 text-xs font-bold text-emerald-800 hover:underline">${label}</button>`;
+            if (st.id === 'st5' && st.mode !== 'manual' && Array.isArray(st.news) && st.news.length) {
+                const list = open ? st.news : st.news.slice(0, 3);
+                return `<ul class="mt-1.5 space-y-1.5">${list.map(n => {
+                    const u = isHttpLink(n.u) ? safeUrl(n.u) : '';
+                    const t = esc(n.t);
+                    return `<li class="text-sm font-medium text-neutral-800 leading-relaxed break-words">• ${u ? `<a href="${u}" target="_blank" rel="noopener noreferrer" class="hover:text-emerald-800 hover:underline">${t}</a>` : t} <span class="text-[11px] text-neutral-500">— ${esc(n.s)}${n.d ? ' · ' + esc(timeAgo(n.d)) : ''}</span></li>`;
+                }).join('')}</ul>${st.news.length > 3 ? toggle(open ? 'কম দেখান' : `আরও ${bnNum(st.news.length - 3)}টি সংবাদ দেখুন`) : ''}`;
+            }
+            const txt = String(st.text || '');
+            const big = txt.length > 200 || txt.split('\n').length > 6;
+            return `<p class="text-sm font-medium text-neutral-800 leading-relaxed mt-1.5 whitespace-pre-line break-words ${big && !open ? 'story-clamp' : ''}">${esc(txt)}</p>${big ? toggle(open ? 'কম দেখান' : 'আরও পড়ুন') : ''}`;
+        }
+
+        function goStory(i) {
+            storyIndex = i;
+            render();
+        }
+
+        function nextStory() {
+            storyIndex = (storyIndex + 1) % fixedStories.length;
+            render();
+        }
+
+        // পোস্ট কার্ড (কোনো অ্যানিমেশন বা লাফানো ছাড়া স্থির ডিজাইন)
+        function renderPostCard(post, isModal = false) {
+            const isAuthor = post.authorPhone === state.currentUser?.phone;
+            const isAdmin = state.currentUser?.isEditor;
+            const isLong = (post.content || '').length > 220;
+            const displayText = isLong ? post.content.substring(0, 220) + '...' : (post.content || '');
+
+            if (!post.reactions) post.reactions = { 'Masaallah': [], 'Dua Roilo': [], 'Innalillah': [] };
+            const mCount = post.reactions['Masaallah']?.length || 0;
+            const dCount = post.reactions['Dua Roilo']?.length || 0;
+            const iCount = post.reactions['Innalillah']?.length || 0;
+            const totalReactions = mCount + dCount + iCount;
+            const myReaction = Object.keys(post.reactions).find(key => post.reactions[key].includes(state.currentUser?.phone));
+
+            if (!post.comments) post.comments = [];
+            const commentsToShow = isModal ? post.comments : post.comments.slice(-2);
+
+            return `
+                <div data-post-card="${esc(post.id)}" class="clean-card p-5 relative">
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex items-center space-x-3 cursor-pointer" onclick="viewUserProfile('${esc(post.authorPhone)}')">
+                            <img src="${safeUrl(post.authorAvatar || getAutoAvatar())}" class="w-10 h-10 rounded-full border border-emerald-200 object-cover">
+                            <div>
+                                <h3 class="font-bold text-neutral-900 hover:text-emerald-700 text-sm">${esc(post.authorName)}</h3>
+                                <div class="flex items-center space-x-2 text-[11px] text-neutral-500">
+                                    <span class="bg-neutral-100 text-neutral-700 px-2 py-0.5 rounded font-medium">${esc(post.authorProfession)}</span>
+                                    <span>•</span>
+                                    <span>${timeAgo(post.createdAt, post.date)}${post.editedAt ? ' · সম্পাদিত' : ''}</span>
+                                </div>
+                            </div>
+                        </div>
+                        ${isAuthor || isAdmin ? `
+                            <div class="relative">
+                                <button onclick="togglePostMenu(event, '${esc(post.id)}')" class="text-neutral-400 hover:text-neutral-800 hover:bg-neutral-100 w-8 h-8 rounded-full flex items-center justify-center" aria-label="পোস্ট মেনু">
+                                    <i class="fa-solid fa-ellipsis-vertical"></i>
+                                </button>
+                                <div id="pm-${esc(post.id)}" class="hidden absolute right-0 mt-1 w-32 bg-white border border-neutral-200 rounded-xl shadow-lg z-20 py-1 text-xs overflow-hidden">
+                                    ${isAuthor ? `<button onclick="editPost('${esc(post.id)}')" class="w-full text-left px-3.5 py-2 hover:bg-neutral-100 text-neutral-800 flex items-center gap-2"><i class="fa-solid fa-pen w-3.5"></i> এডিট</button>` : ''}
+                                    <button onclick="deletePost('${esc(post.id)}')" class="w-full text-left px-3.5 py-2 hover:bg-rose-50 text-rose-600 flex items-center gap-2"><i class="fa-solid fa-trash w-3.5"></i> ডিলিট</button>
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
+
+                    <div class="text-neutral-800 text-sm leading-relaxed mb-3.5 whitespace-pre-line">
+                        <span>${esc(isModal ? post.content : displayText)}</span>
+                        ${isLong && !isModal ? `<button onclick="openPostModal('${esc(post.id)}')" class="text-emerald-700 font-bold ml-1 hover:underline focus:outline-none text-xs">বিস্তারিত...</button>` : ''}
+                    </div>
+
+                    ${post.image ? `
+                        <div class="mb-3.5 rounded-xl overflow-hidden border border-neutral-200 bg-neutral-100 max-h-80 flex items-center justify-center">
+                            <img src="${safeUrl(post.image)}" alt="Post image" class="w-full object-cover max-h-80">
+                        </div>
+                    ` : ''}
+
+                    <div data-react-summary="${esc(post.id)}" class="flex items-center justify-between text-[11px] text-neutral-500 border-b border-neutral-100 pb-2 mb-2.5 min-h-[26px] tabular-nums">
+                        <div>
+                            ${totalReactions > 0 ? `<span class="font-semibold text-emerald-700">🤲 ${bnNum(totalReactions)}টি প্রতিক্রিয়া</span>` : '<span>প্রতিক্রিয়া নেই</span>'}
+                        </div>
+                        <div class="space-x-2">
+                            ${mCount > 0 ? `<span>মাশাআল্লাহ (${bnNum(mCount)})</span>` : ''}
+                            ${dCount > 0 ? `<span>দোয়া রইলো (${bnNum(dCount)})</span>` : ''}
+                            ${iCount > 0 ? `<span>ইন্নালিল্লাহ (${bnNum(iCount)})</span>` : ''}
+                        </div>
+                    </div>
+
+                    <div data-react-bar="${esc(post.id)}" class="grid grid-cols-3 gap-2 border-b border-neutral-100 pb-3 mb-3">
+                        <button type="button" onclick="toggleReaction('${esc(post.id)}', 'Masaallah')" class="h-9 px-2 rounded-xl text-xs font-semibold flex items-center justify-center space-x-1 border select-none ${myReaction === 'Masaallah' ? 'bg-emerald-50 text-emerald-800 border-emerald-300' : 'bg-neutral-50 text-neutral-700 border-neutral-200 hover:bg-neutral-100'}">
+                            <span>🌿</span> <span>মাশাআল্লাহ</span>
+                        </button>
+                        <button type="button" onclick="toggleReaction('${esc(post.id)}', 'Dua Roilo')" class="h-9 px-2 rounded-xl text-xs font-semibold flex items-center justify-center space-x-1 border select-none ${myReaction === 'Dua Roilo' ? 'bg-emerald-50 text-emerald-800 border-emerald-300' : 'bg-neutral-50 text-neutral-700 border-neutral-200 hover:bg-neutral-100'}">
+                            <span>🤲</span> <span>দোয়া রইলো</span>
+                        </button>
+                        <button type="button" onclick="toggleReaction('${esc(post.id)}', 'Innalillah')" class="h-9 px-2 rounded-xl text-xs font-semibold flex items-center justify-center space-x-1 border select-none ${myReaction === 'Innalillah' ? 'bg-emerald-50 text-emerald-800 border-emerald-300' : 'bg-neutral-50 text-neutral-700 border-neutral-200 hover:bg-neutral-100'}">
+                            <span>🕊️</span> <span>ইন্নালিল্লাহ</span>
+                        </button>
+                    </div>
+
+                    <div class="space-y-2.5">
+                        <form onsubmit="handleComment(event, '${esc(post.id)}')" class="flex space-x-2">
+                            <input type="text" id="comment-input-${esc(post.id)}" placeholder="মন্তব্য লিখুন..." class="flex-grow px-3 py-1.5 rounded-xl border border-neutral-200 focus:border-emerald-600 focus:outline-none text-xs">
+                            <button type="submit" class="bg-neutral-900 hover:bg-neutral-800 text-white px-3.5 py-1.5 rounded-xl text-xs font-semibold transition">কমেন্ট</button>
+                        </form>
+
+                        <div data-comment-list="${esc(post.id)}" class="space-y-1.5 mt-2">
+                            ${commentsToShow.map(c => `
+                                <div class="bg-neutral-50 px-3 py-2 rounded-xl border border-neutral-100 text-xs flex justify-between items-center">
+                                    <div>
+                                        <span class="font-bold text-neutral-900 mr-1.5 cursor-pointer hover:text-emerald-700 hover:underline" onclick="viewUserProfile('${esc(c.authorPhone)}')">${esc(c.authorName)}</span>
+                                        <span class="text-neutral-700">${esc(c.text)}</span>
+                                    </div>
+                                    ${(c.authorPhone === state.currentUser.phone || isAuthor || isAdmin) ? `<button onclick="deleteComment('${esc(post.id)}', '${esc(c.id)}')" class="text-neutral-400 hover:text-rose-600 px-1" title="মন্তব্য মুছুন"><i class="fa-solid fa-xmark"></i></button>` : ''}
+                                </div>
+                            `).join('')}
+                        </div>
+
+                        ${!isModal && post.comments.length > 2 ? `
+                            <div class="text-center pt-1">
+                                <button onclick="openPostModal('${esc(post.id)}')" class="text-emerald-700 font-bold text-xs hover:underline">
+                                    সব কমেন্ট দেখুন (${bnNum(post.comments.length)}টি) →
+                                </button>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        // রিঅ্যাকশন দিলে পুরো পেজ রি-রেন্ডার না করে শুধুমাত্র নির্দিষ্ট পোস্টের বার আপডেট (যাতে একটুও না কাঁপে)
+        function updatePostReactionsDOM(postId) {
+            const post = state.posts.find(p => p.id === postId);
+            if (!post) return;
+            const mCount = post.reactions['Masaallah']?.length || 0;
+            const dCount = post.reactions['Dua Roilo']?.length || 0;
+            const iCount = post.reactions['Innalillah']?.length || 0;
+            const totalReactions = mCount + dCount + iCount;
+            const myReaction = Object.keys(post.reactions).find(key => post.reactions[key].includes(state.currentUser?.phone));
+
+            document.querySelectorAll(`[data-react-summary="${postId}"]`).forEach(el => {
+                el.innerHTML = `
+                    <div>
+                        ${totalReactions > 0 ? `<span class="font-semibold text-emerald-700">🤲 ${bnNum(totalReactions)}টি প্রতিক্রিয়া</span>` : '<span>প্রতিক্রিয়া নেই</span>'}
+                    </div>
+                    <div class="space-x-2">
+                        ${mCount > 0 ? `<span>মাশাআল্লাহ (${bnNum(mCount)})</span>` : ''}
+                        ${dCount > 0 ? `<span>দোয়া রইলো (${bnNum(dCount)})</span>` : ''}
+                        ${iCount > 0 ? `<span>ইন্নালিল্লাহ (${bnNum(iCount)})</span>` : ''}
+                    </div>
+                `;
+            });
+
+            const activeCls = 'h-9 px-2 rounded-xl text-xs font-semibold flex items-center justify-center space-x-1 border select-none bg-emerald-50 text-emerald-800 border-emerald-300';
+            const normalCls = 'h-9 px-2 rounded-xl text-xs font-semibold flex items-center justify-center space-x-1 border select-none bg-neutral-50 text-neutral-700 border-neutral-200 hover:bg-neutral-100';
+
+            document.querySelectorAll(`[data-react-bar="${postId}"]`).forEach(bar => {
+                const btns = bar.querySelectorAll('button');
+                if (btns[0]) btns[0].className = myReaction === 'Masaallah' ? activeCls : normalCls;
+                if (btns[1]) btns[1].className = myReaction === 'Dua Roilo' ? activeCls : normalCls;
+                if (btns[2]) btns[2].className = myReaction === 'Innalillah' ? activeCls : normalCls;
+            });
+        }
+
+        function renderNotifications() {
+            const userNotifs = state.notifications.filter(n => n.recipientPhone === state.currentUser.phone);
+            return `
+                ${renderNavbar()}
+                <main class="max-w-2xl mx-auto px-4 py-6 flex-grow w-full">
+                    <div class="flex justify-between items-center mb-5">
+                        <h2 class="text-xl font-bold text-neutral-900">বিজ্ঞপ্তি</h2>
+                        ${userNotifs.length > 0 ? `
+                            <button onclick="clearAllNotifications()" class="text-xs bg-neutral-900 text-white px-3 py-1.5 rounded-xl font-semibold hover:bg-neutral-800 transition">সব মুছে ফেলুন</button>
+                        ` : ''}
+                    </div>
+
+                    <div class="space-y-2.5">
+                        ${userNotifs.length === 0 ? '<div class="clean-card p-8 text-center text-neutral-500 text-sm">কোনো বিজ্ঞপ্তি নেই।</div>' : ''}
+                        ${userNotifs.map(n => `
+                            <div class="p-4 rounded-2xl border ${n.isRead ? 'bg-white border-neutral-200 opacity-80' : 'bg-emerald-50/50 border-emerald-300'} flex justify-between items-center">
+                                <div class="flex items-center space-x-3 cursor-pointer flex-grow" onclick="${n.postId ? `markAsReadAndOpen('${esc(n.id)}', '${esc(n.postId)}')` : `markAsRead('${esc(n.id)}')`}">
+                                    <div class="w-9 h-9 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center flex-shrink-0">
+                                        <i class="fa-solid fa-bell text-xs"></i>
+                                    </div>
+                                    <div>
+                                        <p class="text-xs font-medium text-neutral-900">${esc(n.text)}</p>
+                                        <span class="text-[10px] text-neutral-400">${timeAgo(n.createdAt, n.date)}</span>
+                                    </div>
+                                </div>
+                                <div class="flex items-center space-x-2 flex-shrink-0 ml-2">
+                                    ${!n.isRead ? `<button onclick="markAsRead('${esc(n.id)}')" class="text-[11px] bg-emerald-600 text-white px-2.5 py-1 rounded-lg font-semibold hover:bg-emerald-700 transition">পড়া হয়েছে</button>` : '<span class="text-[10px] text-neutral-400">পঠিত</span>'}
+                                    <button onclick="deleteNotification('${esc(n.id)}')" class="text-neutral-400 hover:text-neutral-900 p-1.5" title="মুছে ফেলুন"><i class="fa-solid fa-xmark"></i></button>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </main>
+            `;
+        }
+
+        function renderProfile(targetPhone = null) {
+            const user = state.users.find(u => u.phone === (targetPhone || state.currentUser.phone)) || state.currentUser;
+            const userPosts = state.posts.filter(p => p.authorPhone === user.phone);
+            const isOwnProfile = user.phone === state.currentUser.phone;
+            const currentEmail = isOwnProfile ? (auth.currentUser?.email || state.currentUser.email || '') : '';
+
+            return `
+                ${renderNavbar()}
+                <main class="max-w-2xl mx-auto px-4 py-6 flex-grow w-full space-y-5">
+                    <div class="clean-card p-6 text-center relative">
+                        <img src="${safeUrl(user.profilePhoto)}" class="w-22 h-22 w-24 h-24 rounded-full mx-auto border-2 border-emerald-600 object-cover mb-3 bg-neutral-100">
+                        <h2 class="text-xl font-bold text-neutral-900">${esc(user.name)}</h2>
+                        <p class="text-xs text-neutral-500 mt-1">মোবাইল: ${esc(user.phone)}</p>
+                        ${isOwnProfile && currentEmail ? `
+                            <p class="text-xs text-neutral-700 mt-1 font-medium">
+                                ইমেইল: <span class="text-emerald-800 font-semibold">${esc(currentEmail)}</span>
+                            </p>
+                        ` : ''}
+                        <span class="inline-block bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs px-3 py-0.5 rounded-full font-semibold mt-2">${esc(user.profession)}</span>
+
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5 pt-5 border-t border-neutral-100 text-center text-xs">
+                            <div class="bg-neutral-50 p-2.5 rounded-xl">
+                                <span class="block text-[10px] text-neutral-400 font-semibold">বয়স</span>
+                                <span class="font-bold text-neutral-900">${esc(user.age)} বছর</span>
+                            </div>
+                            <div class="bg-neutral-50 p-2.5 rounded-xl">
+                                <span class="block text-[10px] text-neutral-400 font-semibold">ঠিকানা</span>
+                                <span class="font-bold text-neutral-900">${esc(user.location)}</span>
+                            </div>
+                            <div class="bg-neutral-50 p-2.5 rounded-xl">
+                                <span class="block text-[10px] text-neutral-400 font-semibold">এসএসসি ব্যাচ</span>
+                                <span class="font-bold text-neutral-900">${esc(user.sscBatch)}</span>
+                            </div>
+                            <div class="bg-neutral-50 p-2.5 rounded-xl">
+                                <span class="block text-[10px] text-neutral-400 font-semibold">পোস্ট</span>
+                                <span class="font-bold text-neutral-900">${bnNum(userPosts.length)}টি</span>
+                            </div>
+                        </div>
+
+                        ${isOwnProfile ? `
+                            <div class="mt-5 pt-4 border-t border-neutral-100 flex flex-wrap justify-center gap-2">
+                                <button onclick="openEditProfileModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition">
+                                    <i class="fa-solid fa-pen-to-square mr-1"></i> প্রোফাইল এডিট
+                                </button>
+                                <button onclick="promptChangeEmail()" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-900 px-3.5 py-2 rounded-xl text-xs font-bold transition border border-emerald-200">
+                                    <i class="fa-solid fa-envelope mr-1"></i> ইমেইল পরিবর্তন
+                                </button>
+                                <button onclick="promptChangePhoto()" class="bg-neutral-100 hover:bg-neutral-200 text-neutral-800 px-3.5 py-2 rounded-xl text-xs font-bold transition">
+                                    <i class="fa-solid fa-image mr-1"></i> ছবি পরিবর্তন
+                                </button>
+                                <button onclick="promptChangePassword()" class="bg-neutral-900 hover:bg-neutral-800 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition">
+                                    <i class="fa-solid fa-key mr-1"></i> পাসওয়ার্ড পরিবর্তন
+                                </button>
+                            </div>
+                        ` : ''}
+
+                        ${state.currentUser.isEditor && !isOwnProfile ? `
+                            <div class="mt-4 pt-4 border-t border-neutral-100 bg-neutral-100 p-3 rounded-xl text-xs text-neutral-800 flex justify-between items-center">
+                                <span><strong>অ্যাডমিন নিয়ন্ত্রণ</strong></span>
+                                <button onclick="adminDeleteUser('${esc(user.phone)}')" class="bg-neutral-900 text-white px-3 py-1.5 rounded-lg font-bold hover:bg-rose-600 transition">ইউজার ডিলিট</button>
+                            </div>
+                        ` : ''}
+                    </div>
+
+                    <h3 class="text-base font-bold text-neutral-900">${isOwnProfile ? 'আপনার পোস্টসমূহ' : `${esc(user.name)}-এর পোস্টসমূহ`} (${bnNum(userPosts.length)})</h3>
+                    <div class="space-y-4">
+                        ${userPosts.length === 0 ? '<p class="text-center text-neutral-500 py-6 clean-card text-sm">কোনো পোস্ট নেই।</p>' : ''}
+                        ${userPosts.map(post => renderPostCard(post)).join('')}
+                    </div>
+                </main>
+            `;
+        }
+
+        function renderAllMembers() {
+            const q = (state.memberQuery || '').trim().toLowerCase();
+            const visibleUsers = state.users.filter(u =>
+                !q || [u.name, u.location, u.sscBatch, u.profession].join(' ').toLowerCase().includes(q)
+            );
+
+            return `
+                ${renderNavbar()}
+                <main class="max-w-2xl mx-auto px-4 py-6 flex-grow w-full">
+                    <h2 class="text-xl font-bold mb-4 text-neutral-900">সকল সদস্য (${bnNum(visibleUsers.length)})</h2>
+                    <input id="memberSearch" type="search" value="${esc(state.memberQuery || '')}" oninput="state.memberQuery = this.value; render()" placeholder="নাম, ঠিকানা, পেশা বা ব্যাচ দিয়ে খুঁজুন" class="w-full mb-4 px-4 py-2.5 rounded-xl border border-neutral-300 focus:border-emerald-600 focus:outline-none text-sm bg-white">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        ${visibleUsers.map(u => `
+                            <div class="clean-card p-3.5 flex items-center justify-between">
+                                <div class="flex items-center space-x-3 cursor-pointer" onclick="viewUserProfile('${esc(u.phone)}')">
+                                    <img src="${safeUrl(u.profilePhoto)}" class="w-11 h-11 rounded-full border border-neutral-200 object-cover">
+                                    <div>
+                                        <h4 class="font-bold text-sm text-neutral-900">${esc(u.name)}</h4>
+                                        <span class="text-[11px] text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded font-medium">${esc(u.profession)}</span>
+                                        <p class="text-[11px] text-neutral-400 mt-0.5">ব্যাচ: ${esc(u.sscBatch)} | ${esc(u.location)}</p>
+                                    </div>
+                                </div>
+                                <button onclick="viewUserProfile('${esc(u.phone)}')" class="bg-neutral-100 text-neutral-900 hover:bg-emerald-600 hover:text-white px-3 py-1.5 rounded-xl text-xs font-semibold transition">প্রোফাইল</button>
+                            </div>
+                        `).join('')}
+                    </div>
+                </main>
+            `;
+        }
+
+        function renderEditorPanel() {
+            if (!state.currentUser?.isEditor) return renderFeed();
+            const reactCount = p => Object.values(p.reactions || {}).reduce((a, r) => a + r.length, 0);
+            const q = (state.adminQuery || '').trim().toLowerCase();
+            const shownUsers = state.users.filter(u =>
+                !q || [u.name, u.phone, u.sscBatch, u.location].join(' ').toLowerCase().includes(q)
+            );
+            const pop = state.popupConfig || { image: '', text: '', duration: 8, active: false };
+
+            return `
+                ${renderNavbar()}
+                <main class="max-w-3xl mx-auto px-4 py-6 flex-grow w-full space-y-5">
+                    <h2 class="text-xl font-bold text-neutral-900 flex items-center gap-2">
+                        <i class="fa-solid fa-sliders text-emerald-700"></i> এডিটর ও অ্যাডমিন প্যানেল
+                    </h2>
+
+                    <div class="grid grid-cols-3 gap-3">
+                        <div class="clean-card p-4 text-center">
+                            <div class="text-2xl font-bold text-neutral-900">${bnNum(state.users.length)}</div>
+                            <div class="text-xs text-neutral-500">মোট সদস্য</div>
+                        </div>
+                        <div class="soft-green-box p-4 text-center">
+                            <div class="text-2xl font-bold text-emerald-800">${bnNum(state.posts.length)}</div>
+                            <div class="text-xs text-emerald-700">মোট পোস্ট</div>
+                        </div>
+                        <div class="clean-card p-4 text-center">
+                            <div class="text-2xl font-bold text-neutral-900">${bnNum(state.posts.reduce((a, p) => a + reactCount(p), 0))}</div>
+                            <div class="text-xs text-neutral-500">মোট প্রতিক্রিয়া</div>
+                        </div>
+                    </div>
+
+                    <!-- ফার্স্ট পেজ পপআপ উইন্ডো কন্ট্রোল (ছবিসহ, কোনো বাড়তি লেখা ছাড়া, নির্দিষ্ট সেকেন্ড পর অটো-ভ্যানিশ) -->
+                    <div class="clean-card p-5 space-y-3 border-emerald-200">
+                        <div class="flex items-center justify-between">
+                            <h3 class="font-bold text-neutral-900 text-sm flex items-center gap-2">
+                                <i class="fa-solid fa-window-restore text-emerald-600"></i> ফার্স্ট পেজ পপআপ উইন্ডো (ছবিসহ)
+                            </h3>
+                            <span class="text-[11px] px-2.5 py-0.5 rounded-full font-bold ${pop.active ? 'bg-emerald-100 text-emerald-800' : 'bg-neutral-100 text-neutral-500'}">
+                                ${pop.active ? 'চালু আছে' : 'বন্ধ আছে'}
+                            </span>
+                        </div>
+                        <p class="text-xs text-neutral-500">পপআপে কোনো বাড়তি লেখা বা ঘোষণা থাকবে না—শুধু আপনার দেওয়া ছবি ও বার্তা দেখাবে এবং নির্দিষ্ট সেকেন্ড পর নিজ থেকেই ভ্যানিশ হয়ে যাবে।</p>
+                        <form onsubmit="handleSavePopupConfig(event)" class="space-y-3">
+                            <div>
+                                <label class="block text-xs font-semibold text-neutral-700 mb-1">ছবির লিংক (Image URL - ঐচ্ছিক)</label>
+                                <input type="url" id="popupImage" value="${esc(pop.image || '')}" placeholder="https://example.com/banner.jpg" class="w-full px-3 py-2 rounded-xl border border-neutral-300 text-sm focus:border-emerald-600 focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-neutral-700 mb-1">আপনার লেখা (পপআপে যা দেখাবে)</label>
+                                <textarea id="popupText" rows="3" placeholder="পপআপে দেখানোর জন্য আপনার লেখা দিন..." class="w-full p-3 rounded-xl border border-neutral-300 text-sm focus:border-emerald-600 focus:outline-none">${esc(pop.text || '')}</textarea>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-neutral-700 mb-1">কত সেকেন্ড পর নিজ থেকে বন্ধ হবে (স্ট্যান্ডার্ড: ৮ সেকেন্ড)</label>
+                                <input type="number" id="popupDuration" min="3" max="60" value="${esc(pop.duration || 8)}" class="w-32 px-3 py-2 rounded-xl border border-neutral-300 text-sm focus:border-emerald-600 focus:outline-none">
+                            </div>
+                            <div class="flex items-center justify-between pt-1 flex-wrap gap-2">
+                                <label class="inline-flex items-center gap-2 cursor-pointer text-xs font-bold text-neutral-800">
+                                    <input type="checkbox" id="popupActive" ${pop.active ? 'checked' : ''} class="w-4 h-4 accent-emerald-600 rounded">
+                                    <span>পপআপ উইন্ডো চালু রাখুন</span>
+                                </label>
+                                <div class="flex gap-2">
+                                    ${pop.active ? `<button type="button" onclick="previewPopupNow()" class="bg-neutral-100 hover:bg-neutral-200 text-neutral-800 px-3.5 py-2 rounded-xl text-xs font-bold">প্রিভিউ</button>` : ''}
+                                    <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 rounded-xl text-xs font-bold">পপআপ সেভ করুন</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="clean-card p-5">
+                        <h3 class="font-bold text-neutral-900 text-sm mb-3"><i class="fa-solid fa-bullhorn text-emerald-600 mr-1"></i> বিজ্ঞপ্তি পাঠান</h3>
+                        <form onsubmit="handleEditorBroadcast(event)" class="space-y-3">
+                            <select id="broadcastTarget" class="w-full p-2.5 rounded-xl border border-neutral-300 text-sm bg-white">
+                                <option value="ALL">সকল সদস্য</option>
+                                ${state.users.map(u => `<option value="${esc(u.phone)}">${esc(u.name)} (${esc(u.phone)})</option>`).join('')}
+                            </select>
+                            <textarea id="broadcastText" rows="2" placeholder="বিজ্ঞপ্তির বার্তা লিখুন..." class="w-full p-3 rounded-xl border border-neutral-300 text-sm focus:border-emerald-600 focus:outline-none"></textarea>
+                            <button type="submit" class="bg-neutral-900 hover:bg-neutral-800 text-white px-5 py-2 rounded-xl text-xs font-bold">পাঠান</button>
+                        </form>
+                    </div>
+
+                    <div class="clean-card p-5 space-y-3">
+                        <div class="flex justify-between items-center flex-wrap gap-2">
+                            <h3 class="font-bold text-neutral-900 text-sm"><i class="fa-solid fa-rotate text-emerald-600 mr-1"></i> লাইভ কার্ড ম্যানেজার</h3>
+                            <div class="flex gap-2">
+                                <button onclick="refreshNewsEveryHour(true)" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-xl text-xs font-bold">সংবাদ রিফ্রেশ</button>
+                                <button onclick="refreshOtherStoriesEvery6Hours(true)" class="bg-neutral-900 hover:bg-neutral-800 text-white px-3 py-1.5 rounded-xl text-xs font-bold">কুরআন ও হাদিস রিফ্রেশ</button>
+                            </div>
+                        </div>
+                        <p class="text-xs text-neutral-500">
+                            সংবাদ: ${newsUpdatedAt ? timeAgo(newsUpdatedAt) : 'এখনো হয়নি'} · কুরআন ও হাদিস: ${otherUpdatedAt ? timeAgo(otherUpdatedAt) : 'এখনো হয়নি'}
+                        </p>
+                        <p class="text-xs text-neutral-500">প্রতিটি কার্ড অটো (সোর্স থেকে নিজে আপডেট) বা ম্যানুয়াল (আপনার লেখা) মোডে রাখতে পারবেন। ম্যানুয়াল কার্ড অটো আপডেটে বদলাবে না।</p>
+                        ${fixedStories.map((st, i) => {
+                            const ls = liveStory(st);
+                            const manual = st.mode === 'manual';
+                            return `
+                            <div class="rounded-xl border ${manual ? 'border-amber-300 bg-amber-50/50' : 'border-neutral-200 bg-neutral-50'} p-3 space-y-2">
+                                <div class="flex items-center justify-between gap-2 flex-wrap">
+                                    <span class="text-xs font-bold text-neutral-900">কার্ড ${bnNum(i + 1)}</span>
+                                    <span class="text-[11px] px-2 py-0.5 rounded-full font-bold ${manual ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}">${manual ? 'ম্যানুয়াল' : 'অটো'}</span>
+                                </div>
+                                <input id="cardTitle_${i}" maxlength="60" value="${esc(ls.title)}" placeholder="কার্ডের শিরোনাম" class="w-full px-3 py-2 rounded-xl border border-neutral-300 text-sm bg-white focus:border-emerald-600 focus:outline-none">
+                                <textarea id="cardText_${i}" rows="3" maxlength="800" placeholder="কার্ডের লেখা" class="w-full p-3 rounded-xl border border-neutral-300 text-sm bg-white focus:border-emerald-600 focus:outline-none">${esc(ls.text)}</textarea>
+                                <div class="flex items-center justify-between gap-2 flex-wrap">
+                                    <select id="cardMode_${i}" class="p-2 rounded-xl border border-neutral-300 text-xs bg-white font-semibold">
+                                        <option value="auto" ${manual ? '' : 'selected'}>অটো আপডেট</option>
+                                        <option value="manual" ${manual ? 'selected' : ''}>ম্যানুয়াল (আমার লেখা)</option>
+                                    </select>
+                                    <button onclick="saveStoryCard(${i})" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-1.5 rounded-xl text-xs font-bold">কার্ড সেভ করুন</button>
+                                </div>
+                            </div>`;
+                        }).join('')}
+                    </div>
+
+                    <div class="clean-card p-5 space-y-3">
+                        <h3 class="font-bold text-neutral-900 text-sm"><i class="fa-solid fa-users text-emerald-600 mr-1"></i> সদস্য তালিকা (${bnNum(shownUsers.length)})</h3>
+                        <input id="adminSearch" type="search" value="${esc(state.adminQuery || '')}" oninput="state.adminQuery = this.value; render()" placeholder="নাম বা নম্বর দিয়ে খুঁজুন" class="w-full px-4 py-2.5 rounded-xl border border-neutral-300 text-sm focus:border-emerald-600 focus:outline-none">
+                        ${shownUsers.map(u => `
+                            <div class="flex items-center justify-between gap-2 p-3 bg-neutral-50 rounded-xl border border-neutral-100">
+                                <div class="flex items-center gap-3 min-w-0 cursor-pointer" onclick="viewUserProfile('${esc(u.phone)}')">
+                                    <img src="${safeUrl(u.profilePhoto)}" class="w-9 h-9 rounded-full object-cover flex-shrink-0">
+                                    <div class="min-w-0">
+                                        <p class="font-bold text-sm text-neutral-900 truncate">${esc(u.name)}</p>
+                                        <p class="text-[11px] text-neutral-500 truncate">${esc(u.phone)} · ব্যাচ ${esc(u.sscBatch)}</p>
+                                    </div>
+                                </div>
+                                <button onclick="adminDeleteUser('${esc(u.phone)}')" class="text-rose-600 hover:bg-rose-50 px-3 py-1.5 rounded-xl text-xs font-bold border border-rose-200 flex-shrink-0">ডিলিট</button>
+                            </div>
+                        `).join('')}
+                    </div>
+                </main>
+            `;
+        }
+
+        // পপআপ উইন্ডো রেন্ডার (কোনো ঘোষণা বা বাড়তি লেখা ছাড়া: শুধু ইউজারের দেওয়া ছবি ও বার্তা + ক্রস আইকন, এবং স্ট্যান্ডার্ড সেকেন্ড পর নিজ থেকেই ভ্যানিশ)
+        function renderWelcomePopup() {
+            if (!state.currentUser || state.currentView !== 'feed') return '';
+            const pop = state.popupConfig;
+            if (!pop || !pop.active) return '';
+            const popId = pop.updatedAt || 'default_popup';
+            if (state.popupDismissedId === popId) return '';
+            const displayText = [pop.title, pop.text].filter(Boolean).join('\n').trim();
+            if (!pop.image && !displayText) return '';
+            const durationSec = Math.max(3, Math.min(60, Number(pop.duration) || 8));
+
+            return `
+                <div id="welcomePopupOverlay" data-popup-id="${esc(popId)}" data-popup-sec="${durationSec}" class="fixed inset-0 bg-neutral-900/55 backdrop-blur-xs z-[70] flex items-center justify-center p-4">
+                    <div class="bg-white border border-neutral-200 rounded-2xl max-w-md w-full overflow-hidden shadow-2xl relative">
+                        <button type="button" onclick="dismissWelcomePopup('${esc(popId)}')" aria-label="বন্ধ করুন" class="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-white/95 hover:bg-neutral-100 text-neutral-900 border border-neutral-200 flex items-center justify-center shadow-sm transition">
+                            <i class="fa-solid fa-xmark text-sm"></i>
+                        </button>
+                        ${pop.image ? `
+                            <div class="w-full max-h-72 bg-neutral-100 overflow-hidden">
+                                <img src="${safeUrl(pop.image)}" alt="Popup image" class="w-full max-h-72 object-cover">
+                            </div>
+                        ` : ''}
+                        ${displayText ? `
+                            <div class="p-5 ${!pop.image ? 'pt-11' : ''}">
+                                <p class="text-sm text-neutral-900 leading-relaxed whitespace-pre-line">${esc(displayText)}</p>
+                            </div>
+                        ` : ''}
+                        <div class="h-1 bg-neutral-100 w-full overflow-hidden">
+                            <div class="h-full bg-emerald-600" style="animation: popupShrink ${durationSec}s linear forwards;"></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function schedulePopupAutoDismiss() {
+            if (popupAutoCloseTimer) {
+                clearTimeout(popupAutoCloseTimer);
+                popupAutoCloseTimer = null;
+            }
+            const overlay = document.getElementById('welcomePopupOverlay');
+            if (!overlay) return;
+            const popId = overlay.getAttribute('data-popup-id');
+            const sec = Number(overlay.getAttribute('data-popup-sec')) || 8;
+            popupAutoCloseTimer = setTimeout(() => {
+                dismissWelcomePopup(popId);
+            }, sec * 1000);
+        }
+
+        function dismissWelcomePopup(popId) {
+            if (popupAutoCloseTimer) {
+                clearTimeout(popupAutoCloseTimer);
+                popupAutoCloseTimer = null;
+            }
+            state.popupDismissedId = popId;
+            const overlay = document.getElementById('welcomePopupOverlay');
+            if (overlay) overlay.remove();
+        }
+
+        function previewPopupNow() {
+            state.popupDismissedId = null;
+            state.currentView = 'feed';
+            render();
+        }
+
+        async function handleSavePopupConfig(event) {
+            event.preventDefault();
+            if (!state.currentUser?.isEditor) return;
+            const image = document.getElementById('popupImage').value.trim();
+            const text = document.getElementById('popupText').value.trim();
+            const duration = Math.max(3, Math.min(60, parseInt(document.getElementById('popupDuration').value, 10) || 8));
+            const active = document.getElementById('popupActive').checked;
+
+            if (active && !text && !image) {
+                showToast('পপআপ চালু করতে ছবি অথবা আপনার বার্তা লিখুন!', true);
+                return;
+            }
+
+            const payload = {
+                title: '',
+                image,
+                text,
+                duration,
+                active,
+                updatedAt: 'pop_' + Date.now()
+            };
+
+            try {
+                await db.collection('config').doc('popup').set(payload);
+                state.popupConfig = payload;
+                state.popupDismissedId = null;
+                showToast(active ? 'পপআপ উইন্ডো সেভ ও চালু হয়েছে!' : 'পপআপ উইন্ডো বন্ধ করা হয়েছে।');
+                render();
+            } catch (e) {
+                showToast('পপআপ সেভ করা যায়নি। আবার চেষ্টা করুন।', true);
+            }
+        }
+
+        function renderPostModal() {
+            if (!state.activeModalPostId) return '';
+            const post = state.posts.find(p => p.id === state.activeModalPostId);
+            if (!post) return '';
+
+            return `
+                <div class="fixed inset-0 bg-neutral-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 overflow-y-auto">
+                    <div class="bg-white border border-neutral-200 rounded-2xl max-w-xl w-full max-h-[90vh] overflow-y-auto p-5 relative shadow-xl">
+                        <button onclick="closePostModal()" class="absolute top-4 right-4 text-neutral-500 hover:text-neutral-900 w-8 h-8 rounded-full bg-neutral-100 flex items-center justify-center font-bold">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                        <h3 class="text-base font-bold text-neutral-900 mb-3">সম্পূর্ণ পোস্ট</h3>
+                        ${renderPostCard(post, true)}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderEditProfileModal() {
+            return `
+                <div id="editProfileModal" class="fixed inset-0 bg-neutral-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+                    <div class="bg-white border border-neutral-200 rounded-2xl max-w-md w-full p-6 relative shadow-xl">
+                        <button onclick="closeEditProfileModal()" class="absolute top-4 right-4 text-neutral-500 hover:text-neutral-900 w-8 h-8 rounded-full bg-neutral-100 flex items-center justify-center font-bold">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                        <h3 class="text-base font-bold text-neutral-900 mb-4">প্রোফাইল এডিট করুন</h3>
+                        <form onsubmit="handleUpdateProfile(event)" class="space-y-3">
+                            <div>
+                                <label class="block text-xs font-semibold text-neutral-700 mb-1">পূর্ণ নাম</label>
+                                <input type="text" id="editName" value="${esc(state.currentUser.name)}" required class="w-full p-2.5 rounded-xl border border-neutral-300 text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-neutral-700 mb-1">বয়স</label>
+                                <input type="number" id="editAge" value="${esc(state.currentUser.age)}" required class="w-full p-2.5 rounded-xl border border-neutral-300 text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-neutral-700 mb-1">ঠিকানা</label>
+                                <input type="text" id="editLocation" value="${esc(state.currentUser.location)}" required class="w-full p-2.5 rounded-xl border border-neutral-300 text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-neutral-700 mb-1">এসএসসি ব্যাচ</label>
+                                <input type="text" id="editBatch" value="${esc(state.currentUser.sscBatch)}" required pattern="[0-9]{4}" maxlength="4" class="w-full p-2.5 rounded-xl border border-neutral-300 text-sm">
+                            </div>
+                            <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-xl font-bold text-sm">সংরক্ষণ করুন</button>
+                        </form>
+                    </div>
+                </div>
+            `;
+        }
+
+        function switchView(view) {
+            state.currentView = view;
+            state.activeModalPostId = null;
+            state.viewingProfilePhone = null;
+            render();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // ইমেইল ভেরিফিকেশন ছাড়াই সরাসরি সাইনআপ
+        async function handleSignup(event) {
+            event.preventDefault();
+            const btn = document.getElementById('signupSubmitBtn');
+            const name = document.getElementById('signupName').value.trim();
+            const email = document.getElementById('signupEmail').value.trim().toLowerCase();
+            const password = document.getElementById('signupPassword').value;
+            const rawPhone = document.getElementById('signupPhone').value.trim();
+            const profession = document.getElementById('signupProfession').value;
+            const age = document.getElementById('signupAge').value;
+            const location = document.getElementById('signupLocation').value.trim();
+            const sscBatch = document.getElementById('signupBatch').value.trim();
+
+            if (!email) { showToast('ইমেইল আবশ্যক!', true); return; }
+            if (password.length < 6) { showToast('পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে!', true); return; }
+            if (!/^1[0-9]{9}$/.test(rawPhone)) { showToast('মোবাইল নম্বর 1 দিয়ে শুরু ১০ ডিজিটের হতে হবে!', true); return; }
+            if (!/^[0-9]{4}$/.test(sscBatch)) { showToast('এসএসসি ব্যাচ ৪ ডিজিটের হতে হবে!', true); return; }
+
+            if (btn) { btn.disabled = true; btn.textContent = 'একাউন্ট তৈরি হচ্ছে...'; }
+            state.signingUp = true;
+
+            try {
+                if (await lookupEmail(rawPhone)) {
+                    showToast('এই মোবাইল নম্বরে ইতিমধ্যে একটি আইডি আছে!', true);
+                    state.signingUp = false;
+                    if (btn) { btn.disabled = false; btn.textContent = 'সাইন আপ করুন'; }
+                    return;
+                }
+
+                const phone = '+880' + rawPhone;
+                const cred = await auth.createUserWithEmailAndPassword(email, password);
+                const uid = cred.user.uid;
+                const profile = {
+                    uid,
+                    name,
+                    phone,
+                    profession,
+                    age,
+                    location,
+                    sscBatch,
+                    profilePhoto: getAutoAvatar()
+                };
+
+                const batch = db.batch();
+                batch.set(db.collection('phones').doc(phone.replace('+', '')), { uid, email });
+                batch.set(db.collection('users').doc(uid), profile);
+                await batch.commit();
+
+                const nid = 'n_' + Date.now();
+                await db.collection('notifications').doc(nid).set({
+                    id: nid,
+                    recipientPhone: phone,
+                    text: 'বৈঠকখানা পরিবারে আপনাকে স্বাগতম!',
+                    isRead: false,
+                    isEditorBroadcast: false,
+                    date: 'এইমাত্র',
+                    createdAt: Date.now()
+                }).catch(() => {});
+
+                state.users.push(profile);
+                state.signingUp = false;
+                applyMe();
+                startListeners();
+                showToast('একাউন্ট তৈরি সফল হয়েছে!');
+                render();
+            } catch (e) {
+                state.signingUp = false;
+                const msg = {
+                    'auth/email-already-in-use': 'এই ইমেইল ইতিমধ্যে ব্যবহৃত হয়েছে!',
+                    'auth/invalid-email': 'সঠিক ইমেইল ঠিকানা দিন!',
+                    'auth/weak-password': 'পাসওয়ার্ড আরও শক্তিশালী দিন!'
+                };
+                showToast(msg[e.code] || 'একাউন্ট তৈরি করা যায়নি, আবার চেষ্টা করুন।', true);
+                if (btn) { btn.disabled = false; btn.textContent = 'সাইন আপ করুন'; }
+            }
+        }
+
+        async function lookupEmail(rawPhone) {
+            try {
+                const d = await db.collection('phones').doc('880' + rawPhone).get();
+                return d.exists ? d.data().email : null;
+            } catch (e) { return null; }
+        }
+
+        function parseLoginId(v) {
+            v = v.trim().replace(/\s+/g, '');
+            if (v.includes('@')) return { email: v.toLowerCase() };
+            const m = v.match(/^(?:\+?880|0)?(1[0-9]{9})$/);
+            return m ? { phone: m[1] } : null;
+        }
+
+        async function handleLogin(event) {
+            event.preventDefault();
+            const id = parseLoginId(document.getElementById('loginPhone').value);
+            const password = document.getElementById('loginPassword').value;
+            if (!id) { showToast('সঠিক ইমেইল বা মোবাইল নম্বর দিন!', true); return; }
+            const email = id.email || await lookupEmail(id.phone);
+            try {
+                if (!email) throw new Error('no-user');
+                await auth.signInWithEmailAndPassword(email, password);
+            } catch (e) {
+                showToast('ইমেইল/মোবাইল অথবা পাসওয়ার্ড ভুল হয়েছে!', true);
+            }
+        }
+
+        function logout() {
+            stopListeners();
+            auth.signOut().catch(() => {});
+            state.currentUser = null;
+            switchView('login');
+        }
+
+        async function recoverPasswordPrompt() {
+            const raw = await showPromptModal({
+                title: 'পাসওয়ার্ড রিসেট',
+                placeholder: 'আপনার ইমেইল বা মোবাইল নম্বর দিন',
+                confirmLabel: 'লিংক পাঠান'
+            });
+            if (!raw) return;
+            const id = parseLoginId(raw);
+            if (!id) { showToast('সঠিক ইমেইল বা মোবাইল নম্বর দিন!', true); return; }
+            const email = id.email || await lookupEmail(id.phone);
+            if (email) { try { await auth.sendPasswordResetEmail(email); } catch (e) { console.error(e); } }
+            showToast('একাউন্ট থাকলে ইমেইলে পাসওয়ার্ড রিসেট লিংক পাঠানো হয়েছে।');
+        }
+
+        async function handleCreatePost(event) {
+            event.preventDefault();
+            const content = document.getElementById('postContent').value.trim();
+            const image = document.getElementById('postImage').value.trim();
+            if (!content && !image) return;
+
+            const newPost = {
+                id: 'p_' + Date.now(),
+                authorPhone: state.currentUser.phone,
+                authorName: state.currentUser.name,
+                authorProfession: state.currentUser.profession,
+                authorAvatar: state.currentUser.profilePhoto,
+                content,
+                image,
+                date: 'এইমাত্র',
+                createdAt: Date.now(),
+                reactions: { 'Masaallah': [], 'Dua Roilo': [], 'Innalillah': [] },
+                comments: []
+            };
+
+            state.posts.unshift(newPost);
+            document.getElementById('postContent').value = '';
+            document.getElementById('postImage').value = '';
+            await saveDataToCloud();
+            render();
+        }
+
+        function togglePostMenu(e, id) {
+            e.stopPropagation();
+            document.querySelectorAll('[id^="pm-"]').forEach(m => { if (m.id !== 'pm-' + id) m.classList.add('hidden'); });
+            const m = document.getElementById('pm-' + id);
+            if (m) m.classList.toggle('hidden');
+        }
+
+        window.addEventListener('click', () => document.querySelectorAll('[id^="pm-"]').forEach(m => m.classList.add('hidden')));
+
+        function closeEditPost() {
+            const m = document.getElementById('editPostModal');
+            if (m) m.remove();
+        }
+
+        function editPost(postId) {
+            const post = state.posts.find(p => p.id === postId);
+            if (!post || post.authorPhone !== state.currentUser.phone) return;
+            closeEditPost();
+            const div = document.createElement('div');
+            div.id = 'editPostModal';
+            div.className = 'fixed inset-0 bg-neutral-900/50 backdrop-blur-xs z-[60] flex items-center justify-center p-4';
+            div.innerHTML = `
+                <div class="bg-white border border-neutral-200 rounded-2xl max-w-lg w-full p-6 shadow-xl">
+                    <h3 class="text-base font-bold text-neutral-900 mb-3">পোস্ট এডিট করুন</h3>
+                    <textarea id="editPostText" rows="5" maxlength="5000" class="w-full p-3 rounded-xl border border-neutral-300 focus:border-emerald-600 focus:outline-none text-sm"></textarea>
+                    <input id="editPostImage" type="text" placeholder="ছবির লিংক (ঐচ্ছিক)" class="w-full mt-3 px-3 py-2 rounded-xl border border-neutral-300 text-xs focus:border-emerald-600 focus:outline-none">
+                    <div class="flex justify-end gap-2 mt-4">
+                        <button onclick="closeEditPost()" class="px-4 py-2 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-xs font-bold">বাতিল</button>
+                        <button onclick="saveEditedPost('${esc(post.id)}')" class="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold">সংরক্ষণ</button>
+                    </div>
+                </div>`;
+            document.body.appendChild(div);
+            document.getElementById('editPostText').value = post.content || '';
+            document.getElementById('editPostImage').value = post.image || '';
+        }
+
+        async function saveEditedPost(postId) {
+            const post = state.posts.find(p => p.id === postId);
+            if (!post) return;
+            const content = document.getElementById('editPostText').value.trim();
+            const image = document.getElementById('editPostImage').value.trim();
+            if (!content && !image) { showToast('পোস্ট ফাঁকা রাখা যাবে না!', true); return; }
+            post.content = content;
+            post.image = image;
+            post.editedAt = Date.now();
+            closeEditPost();
+            await saveDataToCloud();
+            render();
+        }
+
+        async function deletePost(postId) {
+            if (await showConfirmModal('আপনি কি নিশ্চিত এই পোস্টটি ডিলিট করতে চান?', 'ডিলিট করুন')) {
+                state.activeModalPostId = null;
+                state.posts = state.posts.filter(p => p.id !== postId);
+                await saveDataToCloud();
+                render();
+            }
+        }
+
+        // রিঅ্যাকশন দিলে পেজ রি-রেন্ডার না করে তাৎক্ষণিক বাটন আপডেট (একটুও না কাঁপার জন্য)
+        async function toggleReaction(postId, reactionType) {
+            const post = state.posts.find(p => p.id === postId);
+            if (!post) return;
+            if (!post.reactions) post.reactions = { 'Masaallah': [], 'Dua Roilo': [], 'Innalillah': [] };
+            const alreadySelected = (post.reactions[reactionType] || []).includes(state.currentUser.phone);
+            Object.keys(post.reactions).forEach(type => {
+                post.reactions[type] = (post.reactions[type] || []).filter(phone => phone !== state.currentUser.phone);
+            });
+            if (!alreadySelected) post.reactions[reactionType].push(state.currentUser.phone);
+            updatePostReactionsDOM(postId);
+            await saveDataToCloud();
+        }
+
+        async function handleComment(event, postId) {
+            event.preventDefault();
+            const input = document.getElementById(`comment-input-${postId}`);
+            const text = input.value.trim();
+            if (!text) return;
+            const post = state.posts.find(p => p.id === postId);
+            if (!post) return;
+
+            post.comments.push({
+                id: 'c_' + Date.now(),
+                authorPhone: state.currentUser.phone,
+                authorName: state.currentUser.name,
+                text
+            });
+
+            if (post.authorPhone !== state.currentUser.phone) {
+                state.notifications.unshift({
+                    id: 'n_' + Date.now(),
+                    recipientPhone: post.authorPhone,
+                    postId: post.id,
+                    text: `${state.currentUser.name} আপনার পোস্টে মন্তব্য করেছেন।`,
+                    isRead: false,
+                    isEditorBroadcast: false,
+                    date: 'এইমাত্র',
+                    createdAt: Date.now()
+                });
+            }
+
+            input.value = '';
+            render();
+            await saveDataToCloud();
+        }
+
+        async function deleteComment(postId, commentId) {
+            const post = state.posts.find(p => p.id === postId);
+            if (!post || !(await showConfirmModal('মন্তব্যটি মুছে ফেলবেন?', 'মুছুন'))) return;
+            post.comments = (post.comments || []).filter(c => c.id !== commentId);
+            await saveDataToCloud();
+            render();
+        }
+
+        async function clearAllNotifications() {
+            state.notifications = state.notifications.filter(n => n.recipientPhone !== state.currentUser.phone);
+            await saveDataToCloud();
+            render();
+        }
+
+        async function deleteNotification(notifId) {
+            state.notifications = state.notifications.filter(n => n.id !== notifId);
+            await saveDataToCloud();
+            render();
+        }
+
+        async function markAsRead(notifId) {
+            const notif = state.notifications.find(n => n.id === notifId);
+            if (notif) {
+                notif.isRead = true;
+                await saveDataToCloud();
+                render();
+            }
+        }
+
+        function markAsReadAndOpen(notifId, postId) {
+            markAsRead(notifId);
+            openPostModal(postId);
+        }
+
+        function openPostModal(postId) {
+            state.activeModalPostId = postId;
+            render();
+        }
+
+        function closePostModal() {
+            state.activeModalPostId = null;
+            render();
+        }
+
+        function viewMyProfile() {
+            state.viewingProfilePhone = state.currentUser.phone;
+            state.currentView = 'profile';
+            render();
+        }
+
+        function viewUserProfile(phone) {
+            state.viewingProfilePhone = phone;
+            state.currentView = 'profile';
+            render();
+        }
+
+        // নিজের ইমেইল পরিবর্তন ফাংশন
+        async function promptChangeEmail() {
+            const curPass = await showPromptModal({
+                title: 'নিরাপত্তার জন্য বর্তমান পাসওয়ার্ড দিন',
+                placeholder: 'বর্তমান পাসওয়ার্ড',
+                type: 'password',
+                confirmLabel: 'পরবর্তী'
+            });
+            if (!curPass) return;
+
+            try {
+                await auth.signInWithEmailAndPassword(auth.currentUser.email, curPass);
+            } catch (e) {
+                showToast('বর্তমান পাসওয়ার্ড ভুল হয়েছে!', true);
+                return;
+            }
+
+            const newEmailRaw = await showPromptModal({
+                title: 'নতুন ইমেইল ঠিকানা দিন',
+                placeholder: 'newemail@example.com',
+                type: 'email',
+                defaultValue: auth.currentUser.email || '',
+                confirmLabel: 'ইমেইল আপডেট করুন'
+            });
+            if (!newEmailRaw) return;
+            const newEmail = newEmailRaw.trim().toLowerCase();
+            if (!newEmail || !newEmail.includes('@')) {
+                showToast('সঠিক ইমেইল ঠিকানা দিন!', true);
+                return;
+            }
+            if (newEmail === (auth.currentUser.email || '').toLowerCase()) {
+                showToast('এটিই আপনার বর্তমান ইমেইল।');
+                return;
+            }
+
+            try {
+                await auth.currentUser.updateEmail(newEmail);
+                state.currentUser.email = newEmail;
+                const phoneDocId = state.currentUser.phone.replace('+', '');
+                await db.collection('phones').doc(phoneDocId).set({
+                    uid: state.currentUser.uid,
+                    email: newEmail
+                }, { merge: true }).catch(() => {});
+                showToast('আপনার ইমেইল সফলভাবে পরিবর্তিত হয়েছে!');
+                render();
+            } catch (e) {
+                if (e.code === 'auth/operation-not-allowed' && auth.currentUser.verifyBeforeUpdateEmail) {
+                    try {
+                        await auth.currentUser.verifyBeforeUpdateEmail(newEmail);
+                        showToast('নতুন ইমেইলে একটি নিশ্চিতকরণ লিংক পাঠানো হয়েছে।');
+                        return;
+                    } catch (err2) {}
+                }
+                const errMap = {
+                    'auth/email-already-in-use': 'এই ইমেইল ইতিমধ্যে অন্য একাউন্টে ব্যবহৃত হচ্ছে!',
+                    'auth/invalid-email': 'সঠিক ইমেইল ঠিকানা দিন!'
+                };
+                showToast(errMap[e.code] || 'ইমেইল পরিবর্তন করা যায়নি, আবার চেষ্টা করুন।', true);
+            }
+        }
+
+        async function promptChangePhoto() {
+            const url = await showPromptModal({
+                title: 'প্রোফাইল ছবির লিংক দিন',
+                placeholder: 'https://example.com/photo.jpg',
+                confirmLabel: 'আপডেট করুন'
+            });
+            if (!url || !url.trim()) return;
+            state.currentUser.profilePhoto = url.trim();
+            const u = state.users.find(x => x.phone === state.currentUser.phone);
+            if (u) u.profilePhoto = state.currentUser.profilePhoto;
+            await saveDataToCloud();
+            render();
+        }
+
+        async function promptChangePassword() {
+            const cur = await showPromptModal({
+                title: 'বর্তমান পাসওয়ার্ড দিন',
+                placeholder: '••••••••',
+                type: 'password',
+                confirmLabel: 'পরবর্তী'
+            });
+            if (!cur) return;
+            try {
+                await auth.signInWithEmailAndPassword(auth.currentUser.email, cur);
+            } catch (e) {
+                showToast('বর্তমান পাসওয়ার্ড ভুল!', true);
+                return;
+            }
+            const npRaw = await showPromptModal({
+                title: 'নতুন পাসওয়ার্ড দিন (কমপক্ষে ৬ অক্ষর)',
+                placeholder: '••••••',
+                type: 'password',
+                confirmLabel: 'পরিবর্তন করুন'
+            });
+            const np = (npRaw || '').trim();
+            if (np.length < 6) {
+                if (np) showToast('কমপক্ষে ৬ অক্ষরের পাসওয়ার্ড দিন!', true);
+                return;
+            }
+            try {
+                await auth.currentUser.updatePassword(np);
+                showToast('পাসওয়ার্ড পরিবর্তন হয়েছে!');
+            } catch (e) {
+                showToast('পাসওয়ার্ড পরিবর্তন করা যায়নি।', true);
+            }
+        }
+
+        function openEditProfileModal() {
+            const div = document.createElement('div');
+            div.innerHTML = renderEditProfileModal();
+            document.body.appendChild(div.firstElementChild);
+        }
+
+        function closeEditProfileModal() {
+            const modal = document.getElementById('editProfileModal');
+            if (modal) modal.remove();
+        }
+
+        async function handleUpdateProfile(event) {
+            event.preventDefault();
+            const sscBatch = document.getElementById('editBatch').value.trim();
+            if (!/^[0-9]{4}$/.test(sscBatch)) { showToast('এসএসসি ব্যাচ ৪ ডিজিটের হতে হবে!', true); return; }
+
+            state.currentUser.name = document.getElementById('editName').value.trim();
+            state.currentUser.age = document.getElementById('editAge').value.trim();
+            state.currentUser.location = document.getElementById('editLocation').value.trim();
+            state.currentUser.sscBatch = sscBatch;
+
+            const u = state.users.find(x => x.phone === state.currentUser.phone);
+            if (u) {
+                u.name = state.currentUser.name;
+                u.age = state.currentUser.age;
+                u.location = state.currentUser.location;
+                u.sscBatch = state.currentUser.sscBatch;
+            }
+
+            await saveDataToCloud();
+            closeEditProfileModal();
+            showToast('প্রোফাইল আপডেট হয়েছে!');
+            render();
+        }
+
+        async function adminDeleteUser(phone) {
+            if (await showConfirmModal(`এই ইউজার (${phone}) এবং তার পোস্ট মুছে ফেলবেন?`, 'ইউজার ডিলিট')) {
+                db.collection('phones').doc(phone.replace('+', '')).delete().catch(() => {});
+                state.users = state.users.filter(u => u.phone !== phone);
+                state.posts = state.posts.filter(p => p.authorPhone !== phone);
+                await saveDataToCloud();
+                switchView('all_members');
+            }
+        }
+
+        async function handleEditorBroadcast(event) {
+            event.preventDefault();
+            const target = document.getElementById('broadcastTarget').value;
+            const text = document.getElementById('broadcastText').value.trim();
+            if (!text) return;
+
+            if (target === 'ALL') {
+                state.users.forEach(u => {
+                    state.notifications.unshift({
+                        id: 'nb_' + Date.now() + '_' + u.phone,
+                        recipientPhone: u.phone,
+                        text: text,
+                        isRead: false,
+                        isEditorBroadcast: true,
+                        date: 'এইমাত্র',
+                        createdAt: Date.now()
+                    });
+                });
+            } else {
+                state.notifications.unshift({
+                    id: 'nb_' + Date.now(),
+                    recipientPhone: target,
+                    text: text,
+                    isRead: false,
+                    isEditorBroadcast: true,
+                    date: 'এইমাত্র',
+                    createdAt: Date.now()
+                });
+            }
+
+            document.getElementById('broadcastText').value = '';
+            await saveDataToCloud();
+            showToast('বিজ্ঞপ্তি পাঠানো হয়েছে!');
+            render();
+        }
+
+        function render() {
+            const app = document.getElementById('app');
+            if (!state.authReady) {
+                app.innerHTML = '<div class="min-h-screen flex items-center justify-center text-neutral-500 text-sm">লোড হচ্ছে...</div>';
+                return;
+            }
+
+            let contentHTML = '';
+            if (!state.currentUser) {
+                contentHTML = state.currentView === 'signup' ? renderSignup() : renderLogin();
+            } else {
+                switch (state.currentView) {
+                    case 'feed': contentHTML = renderFeed(); break;
+                    case 'notifications': contentHTML = renderNotifications(); break;
+                    case 'profile': contentHTML = renderProfile(state.viewingProfilePhone); break;
+                    case 'all_members': contentHTML = renderAllMembers(); break;
+                    case 'editor_panel': contentHTML = renderEditorPanel(); break;
+                    default: contentHTML = renderFeed();
+                }
+            }
+
+            contentHTML += renderPostModal();
+            contentHTML += renderWelcomePopup();
+
+            const saved = {};
+            app.querySelectorAll('#postContent, #postImage, [id^="comment-input-"]').forEach(el => {
+                if (el.value) saved[el.id] = el.value;
+            });
+            const a = document.activeElement;
+            const focusId = a && app.contains(a) ? a.id : null;
+            const pos = a ? a.selectionStart : null;
+
+            app.innerHTML = contentHTML;
+
+            Object.keys(saved).forEach(id => {
+                const el = document.getElementById(id);
+                if (el && !el.value) el.value = saved[id];
+            });
+            if (focusId) {
+                const el = document.getElementById(focusId);
+                if (el) { el.focus(); try { el.setSelectionRange(pos, pos); } catch (e) {} }
+            }
+            schedulePopupAutoDismiss();
+        }
+    </script>
+</body>
+</html>
 </body>
 </html>
